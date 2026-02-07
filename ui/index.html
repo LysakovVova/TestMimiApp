@@ -33,6 +33,26 @@
 const tg = window.Telegram.WebApp;
 tg.ready();
 
+async function loadProfile() {
+  const r = await fetch("/api/auth", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ initData: tg.initData })
+  });
+
+  if (!r.ok) {
+    document.getElementById("res").innerText = "Ошибка авторизации";
+    return;
+  }
+
+  const data = await r.json();
+  // data может содержать user_id и любые данные профиля
+  document.getElementById("res").innerText =
+    `Привет! user_id=${data.user_id}, баланс=${data.balance}`;
+}
+
+loadProfile();
+
 const API_NUMBER = "/api/number";
 const API_ECHO   = "/api/echo";
 
