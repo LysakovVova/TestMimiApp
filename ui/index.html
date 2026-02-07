@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 15px;
+    }
+
+    input, button {
+      padding: 8px;
+      margin: 5px 0;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>границы</h2>
+
+<input id="min_txt" type="number" placeholder="нижняя">
+<input id="max_txt" type="number" placeholder="верхняя">
+<hr>
+
+<button id="send">получить число</button>
+<div id="res"></div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+
+const API_NUMBER = "/api/number";
+const API_ECHO   = "/api/echo";
+
+/* Получить число */
+document.getElementById("send").onclick = async () => {
+  const out = document.getElementById("res");
+
+
+  const min = document.getElementById("min_txt").value;
+  const max = document.getElementById("max_txt").value;
+
+  const minNum = Number(min);
+  const maxNum = Number(max);
+
+  if (isNaN(minNum) || isNaN(maxNum)) {
+    out.innerText = "Введите числа!";
+    return;
+  }
+
+  try {
+    out.innerText = "Загрузка...";
+
+    const r = await fetch(API_NUMBER, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        min: Number(min),
+        max: Number(max)
+      })
+    });
+
+    if (!r.ok) {
+      throw new Error("HTTP " + r.status);
+    }
+
+    const data = await r.json();
+
+    out.innerText = "Число: " + data.number;
+
+  } catch (e) {
+    console.error(e);
+    out.innerText = "Ошибка";
+  }
+};
+
+</script>
+
+</body>
+</html>
