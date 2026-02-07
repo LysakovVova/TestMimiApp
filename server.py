@@ -1,6 +1,5 @@
 import hmac, hashlib, time, json
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware 
 import random
 from pydantic import BaseModel
 from urllib.parse import parse_qsl
@@ -41,15 +40,6 @@ def auth(req: AuthReq):
 
     return {"user_id": user_id, "balance": balance}
 
-# Для теста можно разрешить всем:
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],          # позже лучше сузить до GitHub URL
-    allow_credentials=False,      # с "*" должно быть False
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 class EchoReq(BaseModel):
     value: str
 class RangeReq(BaseModel):
@@ -64,12 +54,3 @@ def number_range(req: RangeReq):
 
     n = random.randint(req.min, req.max)
     return {"number": n}
-
-
-
-@app.post("/echo")
-def echo(req: EchoReq):
-    try:
-        return {"value": str(int(req.value) ** 2)}
-    except:
-        return {"value": "не число"}
