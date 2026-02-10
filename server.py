@@ -82,10 +82,6 @@ def auth(req: AuthReq):
         return {"user_id": user_id, "last_number": "нет данных"}
     return {"user_id": user_id, "last_number": balance}
 
-class EchoReq(BaseModel):
-    value: str
-
-
 
 class RangeReq(BaseModel):
     user_id: int

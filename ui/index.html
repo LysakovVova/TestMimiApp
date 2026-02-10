@@ -5,17 +5,75 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
+    /* Базовые настройки для всего тела страницы */
     body {
-      font-family: sans-serif;
-      padding: 15px;
+        font-family: sans-serif;
+        /* Используем переменные Телеграма. 
+           Если переменной нет (открыли в браузере), будет белый фон (#fff) */
+        background-color: var(--tg-theme-bg-color, #fff);
+        color: var(--tg-theme-text-color, #000); 
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Центрируем всё */
     }
 
-    input, button {
-      padding: 8px;
-      margin: 5px 0;
-      font-size: 14px;
+    h2 {
+        margin-top: 0;
     }
-  </style>
+
+    /* Красивые поля ввода */
+    input {
+        box-sizing: border-box; /* Чтобы padding не ломал ширину */
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        font-size: 16px;
+        border-radius: 10px; /* Закругленные углы */
+        border: 1px solid var(--tg-theme-hint-color, #ccc);
+        
+        /* Фон поля ввода чуть отличается от основного фона */
+        background-color: var(--tg-theme-secondary-bg-color, #f0f0f0); 
+        color: var(--tg-theme-text-color, #000);
+        outline: none; /* Убираем синюю обводку при клике */
+    }
+
+    /* Поля ввода при нажатии */
+    input:focus {
+        border-color: var(--tg-theme-button-color, #3390ec);
+    }
+
+    /* Красивая кнопка */
+    button {
+        width: 100%;
+        padding: 14px;
+        margin-top: 15px;
+        font-size: 16px;
+        font-weight: bold;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        
+        /* Цвета кнопки как в Телеграме */
+        background-color: var(--tg-theme-button-color, #3390ec);
+        color: var(--tg-theme-button-text-color, #ffffff);
+    }
+
+    /* Эффект нажатия на кнопку */
+    button:active {
+        opacity: 0.8; /* Чуть прозрачнее при клике */
+    }
+
+    /* Блок результата */
+    #res {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+        width: 100%;
+        text-align: center;
+    }
+</style>
 </head>
 
 <body>
@@ -47,8 +105,7 @@ async function loadProfile() {
 
   const data = await r.json();
   // data может содержать user_id и любые данные профиля
-  document.getElementById("res").innerText =
-    `Привет! user_id=${data.user_id}, последнее число = ${data.last_number}`;
+  document.getElementById("res").innerText = `последнее число = ${data.last_number}`;
 }
 
 loadProfile();
