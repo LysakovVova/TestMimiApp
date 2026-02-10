@@ -48,7 +48,7 @@ async function loadProfile() {
   const data = await r.json();
   // data может содержать user_id и любые данные профиля
   document.getElementById("res").innerText =
-    `Привет! user_id=${data.user_id}, баланс=${data.balance}`;
+    `Привет! user_id=${data.user_id}, последнее число = ${data.last_number}`;
 }
 
 loadProfile();
@@ -56,8 +56,7 @@ loadProfile();
 const API_NUMBER = "/api/number";
 const API_ECHO   = "/api/echo";
 
-/* Получить число */
-document.getElementById("send").onclick = async () => {
+document.getElementById("send").onclick = async () => { // при клике на кнопку отправляем запрос на сервер для получения случайного числа в заданных границах
   const out = document.getElementById("res");
 
 
@@ -81,6 +80,7 @@ document.getElementById("send").onclick = async () => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
+        user_id: tg.initDataUnsafe.user.id,
         min: Number(min),
         max: Number(max)
       })
@@ -92,7 +92,15 @@ document.getElementById("send").onclick = async () => {
 
     const data = await r.json();
 
-    out.innerText = "Число: " + data.number;
+    if (data.error) {
+      out.innerText = "Ошибка: " + data.error;
+      return;
+    }
+    if (data.number) {
+      out.innerText = "Ваше число: " + data.number;
+    } else {
+      out.innerText = "Ответ сервера не содержит число";
+    }
 
   } catch (e) {
     console.error(e);
