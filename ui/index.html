@@ -78,13 +78,9 @@
 
 <body>
 
-<h2>границы</h2>
-
-<input id="min_txt" type="number" placeholder="нижняя">
-<input id="max_txt" type="number" placeholder="верхняя">
+<button id="get_inventory">получить инвентарь</button>
 <hr>
-
-<button id="send">получить число</button>
+<button id="buy_items"> купить предмет </button>"
 <div id="res"></div>
 
 <script>
@@ -99,47 +95,33 @@ async function loadProfile() {
   });
 
   if (!r.ok) {
-    document.getElementById("res").innerText = "Ошибка авторизации";
+    document.getElementById("res").innerText = "Ошибка авторизации: " + r.status;
     return;
   }
 
   const data = await r.json();
   // data может содержать user_id и любые данные профиля
-  document.getElementById("res").innerText = `последнее число = ${data.last_number}`;
+  document.getElementById("res").innerText = `баланс = ${data.balance}`;
 }
 
 loadProfile();
 
-const API_NUMBER = "/api/number";
-const API_ECHO   = "/api/echo";
+const API_INVENTORY = "/api/get_inventory";
+const API_BUY_ITEM   = "/api/buy_item";
 
-document.getElementById("send").onclick = async () => { // при клике на кнопку отправляем запрос на сервер для получения случайного числа в заданных границах
+document.getElementById("buy_items").onclick = async () => { // Покупаем предмет
   const out = document.getElementById("res");
-
-
-  const min = document.getElementById("min_txt").value;
-  const max = document.getElementById("max_txt").value;
-
-  const minNum = Number(min);
-  const maxNum = Number(max);
-
-  if (isNaN(minNum) || isNaN(maxNum)) {
-    out.innerText = "Введите числа!";
-    return;
-  }
 
   try {
     out.innerText = "Загрузка...";
 
-    const r = await fetch(API_NUMBER, {
+    const r = await fetch(API_BUY_ITEM, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        user_id: tg.initDataUnsafe.user.id,
-        min: Number(min),
-        max: Number(max)
+        user_id: tg.initDataUnsafe.user.id
       })
     });
 
@@ -153,10 +135,52 @@ document.getElementById("send").onclick = async () => { // при клике н�
       out.innerText = "Ошибка: " + data.error;
       return;
     }
-    if (data.number) {
-      out.innerText = "Ваше число: " + data.number;
+
+    if (data.result  === "success") {
+      out.innerText = data.message // "Предмет успешно куплен!";
     } else {
-      out.innerText = "Ответ сервера не содержит число";
+      out.innerText = "Не удалось купить предмет";
+    }
+
+  } catch (e) {
+    console.error(e);
+    out.innerText = "Ошибка";
+  }
+};
+
+document.getElementById("get_inventory").onclick = async () => { // Получаем инвентарь
+  const out = document.getElementById("res");
+
+  try {
+    out.innerText = "Загрузка...";
+
+    const r = await fetch(API_INVENTORY, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        user_id: tg.initDataUnsafe.user.id
+      })
+    });
+
+    if (!r.ok) {
+      throw new Error("HTTP " + r.status);
+    }
+
+    const data = await r.json();
+
+    if (data.error) {
+      out.innerText = "Ошибка: " + data.error;
+      return;
+    }
+
+    if (data.inventory && data.inventory.length > 0) {
+      out.innerHTML = "<h2>Ваш инвентарь:</h2><ul>" +
+        data.inventory.map(item => `<li>${item.name} x${item.count}</li>`).join("") +
+        "</ul>";
+    } else {
+      out.innerText = "Ваш инвентарь пуст";
     }
 
   } catch (e) {
