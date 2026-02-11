@@ -75,12 +75,18 @@
     }
 </style>
 </head>
+<div id="giftModal" style="display:none; position:fixed; top:20%; left:10%; right:10%; background:#222; color:white; padding:20px; border-radius:15px; border: 2px solid gold; text-align:center; z-index:1000;">
+    <h3>ПОДАРОК!</h3>
+    <p id="giftName">Загрузка...</p>
+    <button onclick="noAcceptGift()">ОТКЛОНИТЬ</button>
+    <button onclick="acceptGift()">ЗАБРАТЬ</button>
+</div>
 
 <body>
 
-<button id="get_inventory">получить инвентарь</button>
+<button id="get_inventory">Инвентарь</button>
 <hr>
-<button id="buy_items"> купить предмет </button>"
+<button id="buy_items"> Купить предмет </button>"
 <div id="res"></div>
 
 <script>
@@ -189,7 +195,54 @@ document.getElementById("get_inventory").onclick = async () => { // Получа
   }
 };
 
+// Функция, которая запускается каждые 3 секунды
+setInterval(checkGift, 3000);
+
+async function checkGift() {
+    // Если окно уже висит, не спрашиваем сервер (ждем реакции игрока)
+
+    try {
+        const response = await fetch("/api/check_offer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: tg.initDataUnsafe.user.id })
+        });
+        
+        const data = await response.json();
+        
+        if (data.has_offer) {
+            // Показываем окно!
+            document.getElementById("giftName").innerText = data.name + (data.count > 1 ? ` x${data.count}` : ""); // Показываем название и количество
+            document.getElementById("giftModal").style.display = "block";
+        }
+    } catch (e) {
+        console.log("Ошибка опроса:", e);
+    }
+}
+
+async function acceptGift() {
+    // Юзер нажал кнопку
+    const response = await fetch("/api/accept_offer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: tg.initDataUnsafe.user.id })
+    });
+    
+    // Скрываем окно
+    document.getElementById("giftModal").style.display = "none";
+}
+async function noAcceptGift() {    
+  const response = await fetch("/api/decline_offer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: tg.initDataUnsafe.user.id })
+    });
+    // Скрываем окно
+    document.getElementById("giftModal").style.display = "none";
+}
+
 </script>
+
 
 </body>
 </html>

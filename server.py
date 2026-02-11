@@ -9,10 +9,13 @@ from fastapi import FastAPI, HTTPException
 import random 
 from pydantic import BaseModel 
 from urllib.parse import parse_qsl 
+import asyncio
 
 
+import worker # 6. Импортируем наш воркер, который будет раздавать подарки пользователям
 
-DB_NAME = "bot_database.db"
+
+DB_NAME = os.getenv("DB_NAME")
 
 def init_db(): # Инициализируем базу данных, создаем таблицы и добавляем начальные данные
     conn = sqlite3.connect(DB_NAME)
@@ -42,6 +45,13 @@ def init_db(): # Инициализируем базу данных, созда�
             PRIMARY KEY (user_id, item_id)
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS active_offers (
+            user_id INTEGER,
+            item_id INTEGER,
+            item_name TEXT,
+            count INTEGER)
+    ''' )
 
     cursor.execute('INSERT OR IGNORE INTO items (id, name, price) VALUES (1, "Камень", 1)')
     cursor.execute('INSERT OR IGNORE INTO items (id, name, price) VALUES (2, "Мусор", 1)')
@@ -150,8 +160,72 @@ class BuyReq(BaseModel):
 def buy_item(req: BuyReq):
     item_id = random.randint(1, 3)  # Здесь можно заменить на реальный выбор предмета
     item_count = random.randint(1, 5)  # Здесь можно заменить на реальное количество
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM items WHERE id = ?", (item_id,))
+    item_name = cursor.fetchone()[0]
     update_user_inventory(req.user_id, item_id, item_count)
+    cursor.close()
+    conn.close()
     return {
         "result": "success",
-        "message": f"Куплено {item_count} единиц предмета с ID {item_id}"
+        "message": f"Куплено {item_count} единиц предмета {item_name}"
     }
+
+
+class offerReq(BaseModel):
+    user_id: int
+
+@app.post("/check_offer") # Эндпоинт для получения активных предложений для пользователя
+def get_offers(req: offerReq):
+    user_id = req.user_id
+    
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT item_id, item_name, count FROM active_offers WHERE user_id = ?", (user_id,))
+    offer = cursor.fetchone()
+    conn.close()
+    
+    if offer:
+        return {"has_offer": True, "item_id": offer[0], "name": offer[1], "count": offer[2]}
+    else:
+        return {"has_offer": False}
+@app.post("/accept_offer") # Эндпоинт для принятия предложения, который принимает идентификатор пользователя и идентификатор предмета, который он хочет принять
+def accept_offer(req: offerReq):
+    user_id = req.user_id
+    
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT item_id, item_name, count FROM active_offers WHERE user_id = ?", (user_id,))
+    offer = cursor.fetchone()
+    
+    if not offer:
+        conn.close()
+        raise HTTPException(404, "Нет активного предложения")
+    
+    item_id, item_name, count = offer
+    update_user_inventory(user_id, item_id, count)
+    
+    cursor.execute("DELETE FROM active_offers WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    
+    return {"result": "success", "message": f"Принято предложение: {count}x {item_name}"}
+
+@app.post("/decline_offer") # Эндпоинт для отклонения предложения, который принимает идентификатор пользователя и удаляет активное предложение
+def decline_offer(req: offerReq):
+    user_id = req.user_id
+    
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM active_offers WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    
+    return {"result": "success", "message": "Предложение отклонено"}
+
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(worker.gift_worker())
+
