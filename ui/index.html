@@ -84,6 +84,9 @@
 
 <body>
 
+<button id="get_planet"> Список планет 
+</button>
+
 <button id="get_inventory">Инвентарь</button>
 <hr>
 <button id="buy_items"> Купить предмет </button>"
@@ -187,6 +190,47 @@ document.getElementById("get_inventory").onclick = async () => { // Получа
         "</ul>";
     } else {
       out.innerText = "Ваш инвентарь пуст";
+    }
+
+  } catch (e) {
+    console.error(e);
+    out.innerText = "Ошибка";
+  }
+};
+
+document.getElementById("get_planet").onclick = async () => { // Получаем список планет
+  const out = document.getElementById("res");
+
+  try {
+    out.innerText = "Загрузка...";
+
+    const r = await fetch("/api/get_planets", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        user_id: tg.initDataUnsafe.user.id
+      })
+    });
+
+    if (!r.ok) {
+      throw new Error("HTTP " + r.status);
+    }
+
+    const data = await r.json();
+
+    if (data.error) {
+      out.innerText = "Ошибка: " + data.error;
+      return;
+    }
+
+    if (data.planets && data.planets.length > 0) {
+      out.innerHTML = "<h2>Список планет:</h2><ul>" +
+        data.planets.map(planet => `<li>${planet.name} (${planet.coordinate_x}, ${planet.coordinate_y})</li>`).join("") +
+        "</ul>" + `<p>Ваши координаты: (${data.user_coordinates.x}, ${data.user_coordinates.y})</p>`;
+    } else {
+      out.innerText = "Планет не найдено";
     }
 
   } catch (e) {

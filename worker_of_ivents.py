@@ -18,8 +18,8 @@ async def gift_worker():
         cursor.execute("SELECT user_id FROM users")
         users = cursor.fetchall()
         
-        # Список возможных подарков (id, name)
-        possible_gifts = cursor.execute("SELECT id, name FROM items").fetchall()
+        # Список возможных подарков (id, name, planet_id)
+        possible_gifts = cursor.execute("SELECT id, name, planet_id FROM items WHERE planet_id = 0").fetchall()
         
         for user in users:
             user_id = user[0]

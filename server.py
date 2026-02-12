@@ -12,7 +12,8 @@ from urllib.parse import parse_qsl
 import asyncio
 
 
-import worker # 6. Импортируем наш воркер, который будет раздавать подарки пользователям
+import worker_of_ivents # 6. Импортируем наш воркер, который будет раздавать подарки пользователям
+import worker_of_coordinate # 7. Импортируем наш воркер, который будет двигать пользователей по координатам
 
 
 DB_NAME = os.getenv("DB_NAME")
@@ -24,16 +25,24 @@ def init_db(): # Инициализируем базу данных, созда�
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
-            balance INTEGER DEFAULT 0
+            balance INTEGER DEFAULT 0,
+            coordinate_x INTEGER DEFAULT 0,
+            coordinate_y INTEGER DEFAULT 0,
+            target_planet_id INTEGER DEFAULT 0,
+            FOREIGN KEY (target_planet_id) REFERENCES planets(id)
         )
     ''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS items (
             id INTEGER PRIMARY KEY,
             name TEXT,
-            price INTEGER
+            price INTEGER,
+            planet_id INTEGER,
+            FOREIGN KEY (planet_id) REFERENCES planets(id)
         )
-    ''')
+    '''
+
+)
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS inventory (
@@ -50,12 +59,25 @@ def init_db(): # Инициализируем базу данных, созда�
             user_id INTEGER,
             item_id INTEGER,
             item_name TEXT,
-            count INTEGER)
-    ''' )
+            count INTEGER
+    )''' )
 
-    cursor.execute('INSERT OR IGNORE INTO items (id, name, price) VALUES (1, "Камень", 1)')
-    cursor.execute('INSERT OR IGNORE INTO items (id, name, price) VALUES (2, "Мусор", 1)')
-    cursor.execute('INSERT OR IGNORE INTO items (id, name, price) VALUES (3, "Обломок", 1)')
+    cursor.execute(''' 
+        CREATE TABLE IF NOT EXISTS planets (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            coordinate_x INTEGER,
+            coordinate_y INTEGER                
+    )''')
+
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (0, "Космос", 0, 0)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (1, "Земля", 10, 10)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (2, "Марс", -20, -10)')
+
+    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (1, "Камень", 1, 0)')
+    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (2, "Мусор", 1, 0)')
+    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (3, "Обломок", 1, 0)')
+    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (4, "Дерево", 10, 1)')
 
     conn.commit()
     conn.close()
@@ -158,12 +180,21 @@ class BuyReq(BaseModel):
 
 @app.post("/buy_item") # Эндпоинт для покупки предмета, который принимает идентификатор пользователя и идентификатор предмета, который он хочет купить
 def buy_item(req: BuyReq):
-    item_id = random.randint(1, 3)  # Здесь можно заменить на реальный выбор предмета
-    item_count = random.randint(1, 5)  # Здесь можно заменить на реальное количество
+
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM items WHERE id = ?", (item_id,))
-    item_name = cursor.fetchone()[0]
+
+    
+    possible_gifts = cursor.execute("SELECT id, name, planet_id FROM items WHERE planet_id = 0").fetchall()
+
+
+
+    item_id = random.choice(possible_gifts)[0]  # Здесь можно заменить на реальный выбор предмета
+    item_count = random.randint(1, 5)  # Здесь можно заменить на реальное количество
+
+    item_name = cursor.execute("SELECT name FROM items WHERE id = ?", (item_id,)).fetchone()[0]
+
+
     update_user_inventory(req.user_id, item_id, item_count)
     cursor.close()
     conn.close()
@@ -225,7 +256,55 @@ def decline_offer(req: offerReq):
     return {"result": "success", "message": "Предложение отклонено"}
 
 
+@app.post("/get_planets") # Эндпоинт для получения списка всех планет с их координатами
+def get_planets(req: offerReq):
+    user_id = req.user_id
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, coordinate_x, coordinate_y FROM planets WhERE id != 0")  # Получаем все планеты, кроме "Космоса"
+    planets = cursor.fetchall()
+    
+    user_coordinates = cursor.execute("SELECT coordinate_x, coordinate_y FROM users WHERE user_id = ?", (user_id,)).fetchone()
+
+    cursor.close()
+    conn.close()
+
+
+    return {"planets": [{"id": p[0], "name": p[1], "coordinate_x": p[2], "coordinate_y": p[3]} for p in planets],
+            "user_coordinates": {"x": user_coordinates[0], "y": user_coordinates[1]}
+            }
+
+class target_planetReq(BaseModel):
+    user_id: int
+    target_planet_id: int
+
+@app.post("/set_target_planet") # Эндпоинт для установки цели планеты
+def set_target_planet(req: target_planetReq):
+    user_id = req.user_id
+    target_planet_id = req.target_planet_id
+    
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    # Проверяем, существует ли планета с таким ID
+    cursor.execute("SELECT id FROM planets WHERE id = ?", (target_planet_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(404, "Планета не найдена")
+    
+    # Устанавливаем цель планеты для пользователя
+    cursor.execute("UPDATE users SET target_planet_id = ? WHERE user_id = ?", (target_planet_id, user_id))
+
+    planet_name = cursor.execute("SELECT name FROM planets WHERE id = ?", (target_planet_id,)).fetchone()[0]
+    conn.commit()
+    conn.close()
+    
+    return {"result": "success", "message": f"Цель планеты установлена на {planet_name}"}
+
+
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(worker.gift_worker())
+    asyncio.create_task(worker_of_ivents.gift_worker())
+    asyncio.create_task(worker_of_coordinate.coordinate_worker())
 
