@@ -184,7 +184,7 @@ document.getElementById("get_inventory").onclick = async () => { // Получа
 
     if (data.inventory && data.inventory.length > 0) {
       out.innerHTML = "<h2>Ваш инвентарь:</h2><ul>" +
-        data.inventory.map(item => `<li>${item.name} x${item.count}</li>`).join("") +
+        data.inventory.map(item => `<li>${item.name}: ${item.count}</li>`).join("") +
         "</ul>";
     } else {
       out.innerText = "Ваш инвентарь пуст";
@@ -298,7 +298,7 @@ document.getElementById("get_planet").onclick = async () => {
 };
 
 // Функция, которая запускается каждые 3 секунды
-setInterval(checkGift, 3000);
+// setInterval(checkGift, 3000);
 
 async function checkGift() {
     // Если окно уже висит, не спрашиваем сервер (ждем реакции игрока)
@@ -313,7 +313,7 @@ async function checkGift() {
         
         if (data.has_offer) {
             // Показываем окно!
-            document.getElementById("giftName").innerText = data.name + (data.count > 1 ? ` x${data.count}` : ""); // Показываем название и количество
+            document.getElementById("giftName").innerText = data.name + (data.count > 1 ? `: ${data.count}` : ""); // Показываем название и количество
             document.getElementById("giftModal").style.display = "block";
         }
     } catch (e) {
