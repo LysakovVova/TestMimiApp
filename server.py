@@ -29,7 +29,9 @@ def init_db(): # Инициализируем базу данных, созда�
             coordinate_x INTEGER DEFAULT 0,
             coordinate_y INTEGER DEFAULT 0,
             target_planet_id INTEGER DEFAULT 0,
-            FOREIGN KEY (target_planet_id) REFERENCES planets(id)
+            currently_on_planet_id INTEGER DEFAULT 0,
+            FOREIGN KEY (target_planet_id) REFERENCES planets(id),
+            FOREIGN KEY (currently_on_planet_id) REFERENCES planets(id)
         )
     ''')
     cursor.execute('''
@@ -59,7 +61,9 @@ def init_db(): # Инициализируем базу данных, созда�
             user_id INTEGER,
             item_id INTEGER,
             item_name TEXT,
-            count INTEGER
+            count INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (item_id) REFERENCES items(id)
     )''' )
 
     cursor.execute(''' 
@@ -78,6 +82,10 @@ def init_db(): # Инициализируем базу данных, созда�
     cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (2, "Мусор", 1, 0)')
     cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (3, "Обломок", 1, 0)')
     cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (4, "Дерево", 10, 1)')
+    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (5, "Вода", 10, 1)')    
+    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (6, "Камень", 10, 1)')    
+    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (7, "Песок", 10, 2)')    
+    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, planet_id) VALUES (8, "Красный камень", 10, 2)')
 
     conn.commit()
     conn.close()
@@ -184,8 +192,10 @@ def buy_item(req: BuyReq):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
+    current_planet_id = cursor.execute("SELECT currently_on_planet_id FROM users WHERE user_id = ?", (req.user_id,)).fetchone()[0]
+
     
-    possible_gifts = cursor.execute("SELECT id, name, planet_id FROM items WHERE planet_id = 0").fetchall()
+    possible_gifts = cursor.execute("SELECT id, name, planet_id FROM items WHERE planet_id = ?", (current_planet_id,)).fetchall()
 
 
 
@@ -281,8 +291,18 @@ class target_planetReq(BaseModel):
 
 @app.post("/set_target_planet") # Эндпоинт для установки цели планеты
 def set_target_planet(req: target_planetReq):
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
     user_id = req.user_id
     target_planet_id = req.target_planet_id
+
+    current_planet_id = cursor.execute("SELECT currently_on_planet_id FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    if current_planet_id == target_planet_id:
+        cursor.close()
+        conn.close()
+        return {"result": "success", "message": "Вы уже на этой планете!"}
     
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -292,6 +312,9 @@ def set_target_planet(req: target_planetReq):
     if not cursor.fetchone():
         conn.close()
         raise HTTPException(404, "Планета не найдена")
+    
+    cursor.execute("UPDATE users SET currently_on_planet_id = 0 WHERE user_id = ?", (user_id,))  # Сбрасываем текущее местоположение, если пользователь уже на планете
+    
     
     # Устанавливаем цель планеты для пользователя
     cursor.execute("UPDATE users SET target_planet_id = ? WHERE user_id = ?", (target_planet_id, user_id))

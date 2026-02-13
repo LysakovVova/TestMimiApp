@@ -42,8 +42,10 @@ async def coordinate_worker():
             else:
                 new_y = user_y
 
-            if (new_x == target_x) and (new_y == target_y):
-                cursor.execute("UPDATE users SET target_planet_id = 0 WHERE user_id = ?", (user_id,))  # Сбрасываем цель
+            if (new_x == target_x and new_y == target_y):
+                # Пользователь достиг планеты, обновляем его текущее местоположение
+                cursor.execute("UPDATE users SET currently_on_planet_id = ? WHERE user_id = ?", (target_planet_id, user_id))
+                # print(f"Пользователь {user_id} достиг планеты {target_planet_id}!")
 
             cursor.execute("UPDATE users SET coordinate_x = ?, coordinate_y = ? WHERE user_id = ?", (new_x, new_y, user_id))
         

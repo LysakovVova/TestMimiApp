@@ -15,14 +15,21 @@ async def gift_worker():
         cursor = conn.cursor()
         
         # Берем всех юзеров
-        cursor.execute("SELECT user_id FROM users")
+        cursor.execute("SELECT user_id, currently_on_planet_id FROM users")
         users = cursor.fetchall()
         
         # Список возможных подарков (id, name, planet_id)
-        possible_gifts = cursor.execute("SELECT id, name, planet_id FROM items WHERE planet_id = 0").fetchall()
         
         for user in users:
             user_id = user[0]
+            currently_on_planet_id = user[1]
+
+            # Список возможных подарков (id, name, planet_id)
+            possible_gifts = cursor.execute("SELECT id, name, planet_id FROM items WHERE planet_id = ?", (currently_on_planet_id,)).fetchall()
+            
+            if not possible_gifts:
+                continue  # Если нет подарков для этой планеты, пропускаем пользователя
+
             gift = random.choice(possible_gifts)
             
             # Сначала удаляем старое (оно сгорает!)
