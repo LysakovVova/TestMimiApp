@@ -50,7 +50,8 @@ def get_user_inventory(user_id: int): # Получаем инвентарь по
     cursor.execute(query, (user_id,))
     items = cursor.fetchall()
     conn.close()
-    return [{"name": name, "count": count} for name, count in items]
+    return {"items": [{"name": name, "count": count} for name, count in items]}
+
 
 
 def create_user(user_id: int):
@@ -185,3 +186,67 @@ def set_target_planet(user_id: int, target_planet_id: int):
     conn.close()
     
     return {"result": "success", "message": f"Цель планеты установлена на {planet_name}"}
+
+
+def unlock_cave(user_id: int, cave_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    # 1. Какие ресурсы нужны?
+    cursor.execute("SELECT item_id, count FROM cave_requirements WHERE cave_id = ?", (cave_id,))
+    requirements = cursor.fetchall() # Список кортежей [(1, 100), (5, 50)]
+
+    if not requirements:
+        # Если требований нет, значит пещера бесплатная или ошибка
+        pass 
+
+    # 2. ПРОВЕРКА: Хватает ли у игрока ресурсов?
+    for item_id, required_count in requirements:
+        cursor.execute("SELECT count FROM inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id))
+        result = cursor.fetchone()
+        user_has = result[0] if result else 0
+
+        item_name = cursor.execute("SELECT name FROM items WHERE id = ?", (item_id,)).fetchone()[0]
+        
+        if user_has < required_count:
+            conn.close()
+            # Находим имя ресурса для красивой ошибки
+            # (можно сделать отдельным запросом, но для простоты вернем ID)
+            return {"status": "error", "message": f"Не хватает ресурса {item_name}!"}
+
+    # 3. СПИСАНИЕ: Если мы здесь, значит всего хватает. Списываем.
+    try:
+        for item_id, required_count in requirements:
+            cursor.execute('''
+                UPDATE inventory SET count = count - ? 
+                WHERE user_id = ? AND item_id = ?
+            ''', (required_count, user_id, item_id))
+            
+        # 4. ОТКРЫВАЕМ ПЕЩЕРУ
+        cursor.execute("INSERT INTO unlock_caves (user_id, cave_id) VALUES (?, ?)", (user_id, cave_id))
+        
+        conn.commit()
+    except Exception as e:
+        conn.rollback() # Отменяем все изменения, если что-то сломалось
+        return {"status": "error", "message": "Ошибка БД"}
+
+    conn.close()
+    return {"status": "ok", "message": "Пещера разблокирована!"}
+
+def get_cave(user_id: int, planet_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    # Получаем пещеры на планете
+    cursor.execute('''
+        SELECT caves.id, caves.name, 
+               CASE WHEN unlock_caves.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_unlocked
+        FROM caves
+        LEFT JOIN unlock_caves ON caves.id = unlock_caves.cave_id AND unlock_caves.user_id = ?
+        WHERE caves.planet_id = ?
+    ''', (user_id, planet_id))
+    
+    caves = cursor.fetchall()
+    conn.close()
+
+    return {"caves": [{"id": c[0], "name": c[1], "is_unlocked": bool(c[2])} for c in caves]}

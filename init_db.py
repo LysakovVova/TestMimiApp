@@ -17,7 +17,6 @@ def init_planets():
     
     conn.commit()
     conn.close()
-
 def init_caves():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -56,6 +55,7 @@ def init_db():
             coordinate_y INTEGER DEFAULT 0,
             target_planet_id INTEGER DEFAULT 0,
             currently_on_planet_id INTEGER DEFAULT 0,
+            
             FOREIGN KEY (target_planet_id) REFERENCES planets(id),
             FOREIGN KEY (currently_on_planet_id) REFERENCES planets(id)
         )
@@ -114,6 +114,16 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(user_id),
             FOREIGN KEY (cave_id) REFERENCES caves(id),
             PRIMARY KEY (user_id, cave_id)
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cave_requirements (
+            cave_id INTEGER,
+            item_id INTEGER,   -- ID ресурса (из таблицы items)
+            count INTEGER,    -- Сколько нужно (например, 100)
+            FOREIGN KEY(cave_id) REFERENCES caves(id),
+            FOREIGN KEY(item_id) REFERENCES items(id)
         )
     ''')
     init_planets()  # Инициализируем планеты

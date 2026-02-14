@@ -75,8 +75,28 @@ class target_planetReq(BaseModel):
 def set_target_planet(req: target_planetReq):
     user_id = req.user_id
     target_planet_id = req.target_planet_id
-
     return user_action.set_target_planet(user_id, target_planet_id)
+
+class unlock_caveReq(BaseModel):
+    user_id: int
+    cave_id: int
+
+class get_caveReg(BaseModel):
+    user_id: int
+    planet_id: int
+@app.post("/get_cave")
+def get_cave(req: get_caveReg):
+    user_id = req.user_id
+    planet_id = req.planet_id
+    return user_action.get_cave(user_id, planet_id)
+
+@app.post("/unlock_cave") # Эндпоинт для открытия пещеры, который принимает идентификатор пользователя и идентификатор пещеры, которую он хочет открыть
+def unlock_cave(req: unlock_caveReq):
+    user_id = req.user_id
+    cave_id = req.cave_id
+    return user_action.unlock_cave(user_id, cave_id)
+    
+
 
 
 @app.on_event("startup")
