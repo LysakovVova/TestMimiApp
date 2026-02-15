@@ -23,8 +23,8 @@ def init_caves():
     
     # Добавляем пещеры для каждой планеты
     cursor.execute('INSERT OR IGNORE INTO caves (id, name, planet_id) VALUES (0, "Пещера 1", 0)')
-    cursor.execute('INSERT OR IGNORE INTO caves (id, name, planet_id) VALUES (1, "Пещера 2", 0)')
-    cursor.execute('INSERT OR IGNORE INTO caves (id, name, planet_id) VALUES (2, "Пещера 3", 0)')
+    cursor.execute('INSERT OR IGNORE INTO caves (id, name, planet_id) VALUES (1, "Пещера 2", 1)')
+    cursor.execute('INSERT OR IGNORE INTO caves (id, name, planet_id) VALUES (2, "Пещера 3", 2)')
     
     conn.commit()
     conn.close()

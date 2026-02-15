@@ -255,12 +255,26 @@ def get_used_coordinates(user_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
+    create_user(user_id)  # Убедимся, что пользователь есть в базе
+
     cursor.execute("SELECT coordinate_x, coordinate_y, currently_on_planet_id FROM users WHERE user_id = ?", (user_id,))
     result = cursor.fetchone()
+    
     planet_name = cursor.execute("SELECT name FROM planets WHERE id = (SELECT currently_on_planet_id FROM users WHERE user_id = ?)", (user_id,)).fetchone()
     conn.close()
 
     if result and result[2] != 0:
         return {"coordinate_x": result[0], "coordinate_y": result[1],"planet_name": planet_name[0]}
     else:
-        return {"coordinate_x": result[0], "coordinate_y": result[1],"planet_name": "В космосе"}
+        return {"coordinate_x": result[0], "coordinate_y": result[1],"planet_name": None}
+
+
+def get_user_planet(user_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT currently_on_planet_id FROM users WHERE user_id = ?", (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+
+    return result[0] if result else None

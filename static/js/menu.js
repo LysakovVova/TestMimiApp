@@ -20,7 +20,7 @@ export function initMenu() {
 
     if (menuContent.classList.contains("show")) {
       menuBtn.innerText = "❌ ЗАКРЫТЬ";
-      menuBtn.style.color = "#e94560";
+      menuBtn.style.color = "white";
     } else {
       menuBtn.innerText = "☰ МЕНЮ ИГРЫ";
       menuBtn.style.color = "white";
@@ -81,7 +81,7 @@ export function initMenu() {
               // Генерируем кнопки для каждого предмета
               data.items.forEach(item => {
                   const btn = document.createElement("button");
-                  btn.className = "inventory-item-btn"; // Наш новый стиль
+                  btn.className = "cave-item-btn"; // Наш новый стиль
                   btn.innerText = `🔹 ${item.name} (x${item.count})`;
                   
                   // Вешаем событие клика на предмет

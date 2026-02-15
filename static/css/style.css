@@ -21,7 +21,16 @@ p { color: #aeb6bf; }
   z-index: 100;
 }
 
-.main-menu-btn {
+.cave-wrapper {
+    /*display: none; */
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 100;
+}
+
+.main-menu-btn, .cave-menu-btn {
   background-color: #16213e;
   border: 2px solid #0f3460;
   color: white;
@@ -34,7 +43,7 @@ p { color: #aeb6bf; }
   transition: 0.3s;
 }
 
-.main-menu-btn:hover { background-color: #0f3460; }
+.main-menu-btn:hover, .cave-menu-btn:hover { background-color: #0f3460; }
 
 .dropdown-content {
   display: none;
@@ -43,6 +52,8 @@ p { color: #aeb6bf; }
   border-radius: 0 0 10px 10px;
   margin-top: 5px;
   box-shadow: 0px 8px 16px rgba(0,0,0,0.5);
+
+  position: relative;
 }
 
 .show { display: block; animation: slideDown 0.3s; }
@@ -67,13 +78,9 @@ p { color: #aeb6bf; }
 .dropdown-content button:hover { background-color: #16213e; }
 .dropdown-content button:last-child { border-bottom: none; }
 
-#res {
-  width: 100%;
-  max-width: 400px;
-}
 
 /* Контейнер для предметов (скрыт) */
-.inventory-container, .planet-container {
+.inventory-container, .planet-container, .cave-container {
     display: none; /* Скрыто */
     background-color: #121826; /* Чуть темнее фона меню */
     border-left: 2px solid #e94560; /* Красная полоска слева для красоты */
@@ -81,14 +88,27 @@ p { color: #aeb6bf; }
 }
 
 /* Кнопки самих предметов */
-.inventory-item-btn, .planet-item-btn {
+.inventory-item-btn, .planet-item-btn, .cave-item-btn {
     font-size: 14px;
     padding: 10px;
     color: #aeb6bf;
     border-bottom: 1px dashed #333;
 }
 
-.inventory-item-btn:hover, .planet-item-btn:hover {
+.inventory-item-btn:hover, .planet-item-btn:hover, .cave-item-btn:hover {
     background-color: #1f2a40;
     color: white;
+}
+
+#user_coordinate {
+  margin-top: 5px;       /* Отступ сверху, чтобы меню не прилипало */
+  transition: all 0.3s;   /* Плавное движение при открытии меню */
+  font-size: 20px;        /* Размер шрифта */
+  color: white;         /* Цвет (голубой неон) */
+  text-align: center;
+  width: 100%;
+}
+
+.hidden {
+    display: none !important;
 }

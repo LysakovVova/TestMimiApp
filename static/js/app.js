@@ -1,8 +1,10 @@
 // js/app.js
 import { getUserId, postJson } from "./api.js";
 import { initMenu } from "./menu.js";
+import { initCaveMenu, toggleMineInterface } from "./menuCave.js";
 
 initMenu();
+initCaveMenu();
 updateUserCoordinate();
 
 export async function updateUserCoordinate() {
@@ -35,6 +37,12 @@ export async function updateUserCoordinate() {
         const x = data.coordinate_x ?? "?";
         const y = data.coordinate_y ?? "?";
         const planet = data.planet_name || "Открытый космос";
+
+        if (planet === "Открытый космос") {
+            toggleMineInterface(false); // Скрываем интерфейс шахт
+        } else{
+            toggleMineInterface(true); // Показываем интерфейс шахт
+        }
 
         coordElement.innerText = `Координаты: (${x}, ${y}) \n 🪐 ${planet}`;
         
