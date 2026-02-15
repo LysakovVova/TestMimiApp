@@ -113,3 +113,74 @@ p { color: #aeb6bf; }
 .hidden {
     display: none !important;
 }
+
+/* Контейнер одной шахты */
+.cave-accordion-item {
+    border-bottom: 1px solid #333;
+    background-color: #1a1a2e;
+}
+
+/* Заголовок (название шахты), на который кликаем */
+.cave-header-btn {
+    width: 100%;
+    padding: 12px;
+    background: none;
+    border: none;
+    text-align: left;
+    color: #e94560;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cave-header-btn:hover {
+    background-color: #16213e;
+}
+
+/* Скрытый блок с кнопкой "Выбрать" или ресурсами */
+.cave-details {
+    display: none; /* Скрыто по умолчанию */
+    padding: 10px;
+    background-color: #121212; /* Темнее фона */
+    color: #aeb6bf;
+    font-size: 14px;
+    border-left: 2px solid #e94560;
+}
+
+/* Класс для показа блока */
+.cave-details.open {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+/* Кнопка "ВЫБРАТЬ ЭТУ ШАХТУ" */
+.select-mine-btn {
+    width: 100%;
+    padding: 10px;
+    background-color: #00d2ff;
+    color: #000;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 5px;
+}
+.select-mine-btn:hover { background-color: #00aaff; }
+
+/* Список ресурсов для разблокировки */
+.unlock-cost-list {
+    list-style: none;
+    padding: 0;
+    margin: 5px 0;
+}
+.unlock-cost-list li {
+    margin-bottom: 4px;
+    color: #ff4757; /* Красный цвет для требований */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

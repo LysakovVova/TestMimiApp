@@ -140,7 +140,8 @@ def init_db():
             item_id INTEGER,   -- ID ресурса (из таблицы items)
             count INTEGER,    -- Сколько нужно (например, 100)
             FOREIGN KEY(cave_id) REFERENCES caves(id),
-            FOREIGN KEY(item_id) REFERENCES items(id)
+            FOREIGN KEY(item_id) REFERENCES items(id),
+            PRIMARY KEY (cave_id, item_id)
         )
     ''')
 

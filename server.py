@@ -99,6 +99,23 @@ def choice_cave(req: unlock_caveReq):
     user_id = req.user_id
     cave_id = req.cave_id
     return user_action.choice_cave(user_id, cave_id)
+
+@app.post("/unlock_cave")
+def unlock_cave(req: unlock_caveReq):
+    user_id = req.user_id
+    cave_id = req.cave_id
+    return user_action.unlock_cave(user_id, cave_id)
+
+@app.post("/get_cave_info")
+def get_cave_info(req: unlock_caveReq):
+    user_id = req.user_id
+    cave_id = req.cave_id
+    return user_action.get_cave_info(cave_id)
+
+@app.post("/mine_cave")
+def mine(req: get_caveReg):
+    user_id = req.user_id
+    return user_action.mine(user_id)
     
 
 

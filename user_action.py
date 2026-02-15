@@ -233,6 +233,26 @@ def unlock_cave(user_id: int, cave_id: int):
     conn.close()
     return {"status": "ok", "message": "Пещера разблокирована!"}
 
+
+def get_cave_info(cave_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT item_id, count FROM cave_requirements WHERE cave_id = ?", (cave_id,))
+    requirements = cursor.fetchall() # Список кортежей [(1, 100), (5, 50)]
+    
+    if not requirements:
+        conn.close()
+        return {"requirements": []} # Пещера бесплатная или ошибка
+    
+    req_list = []
+    for item_id, count in requirements:
+        item_name = cursor.execute("SELECT name FROM items WHERE id = ?", (item_id,)).fetchone()[0]
+        req_list.append({"item_id": item_id, "item_name": item_name, "count": count})
+
+    conn.close()
+    return {"requirements": req_list}
+
 def get_cave(user_id: int, planet_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -301,7 +321,53 @@ def choice_cave(user_id: int, cave_id: int):
     # Если разблокирована, устанавливаем ее как текущую локацию пользователя
     cursor.execute("UPDATE users SET currently_on_cave_id = ? WHERE user_id = ?", (cave_id, user_id))  # Устанавливаем пещеру
     
+    cave_name = cursor.execute("SELECT name FROM caves WHERE id = ?", (cave_id,)).fetchone()[0]
     conn.commit()
     conn.close()
     
-    return {"status": "ok", "message": "Вы вошли в пещеру!"}
+    return {"status": "ok", "message": f"Вы вошли в пещеру {cave_name}!", "cave_name": cave_name}
+
+
+def roll_independent(resources):
+    result = []
+    for item_id, chance, name in resources:
+        if random.random() < chance:  # chance от 0 до 1
+            result.append(name)
+    return result
+
+
+def mine(user_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    # Получаем текущую пещеру пользователя
+    cursor.execute("SELECT currently_on_cave_id FROM users WHERE user_id = ?", (user_id,))
+    result = cursor.fetchone()
+    
+    if not result or result[0] == 0:
+        conn.close()
+        return {"status": "error", "message": "Вы не находитесь в пещере!"}
+    
+    cave_id = result[0]
+
+    cave_name = cursor.execute("SELECT name FROM caves WHERE id = ?", (cave_id,)).fetchone()[0]
+
+    # Получаем ресурсы, которые можно добыть в этой пещере
+    cursor.execute("SELECT id, chance, name FROM items WHERE cave_id = ?", (cave_id,))
+    resources = cursor.fetchall() # [(item_id, chance, name), ...]
+
+    if not resources:
+        conn.close()
+        return {"status": "error", "message": "В этой пещере нет ресурсов для добычи!"}
+
+    result_items = {}
+    for _ in range(5):
+        for item_name in roll_independent(resources):
+            result_items[item_name] = result_items.get(item_name, 0) + 1
+
+    conn.close()
+    return {
+    "status": "ok",
+    "mined_items": [{"item_name": k, "count": v} for k, v in result_items.items()],
+    "cave_name": cave_name
+    }
