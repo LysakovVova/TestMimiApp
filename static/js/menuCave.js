@@ -249,26 +249,30 @@ export function initCaveMenu() {
 
 export function toggleMineInterface(show) {
     const mineBlock = document.getElementById("mine_interface");
-    const caveMiningBtn = document.getElementById("caveMiningBtn");
-    const miningresult = document.getElementById("miningResult");
-    const menuContent = document.getElementById("menuCaveContent");
-    const caveList = document.getElementById("caveList");
-    const menuBtn = document.getElementById("menuCaveBtn");
+    const mineBtn = document.getElementById('caveMiningBtn');
+        const mineRes = document.getElementById('miningResult');
+        const menuContent = document.getElementById('menuCaveContent');
+        const menuBtn = document.getElementById('menuCaveBtn');
 
     
     if (!mineBlock) return; // Защита от ошибок
 
     if (show) {
         mineBlock.classList.remove("hidden"); // Убираем класс -> блок появляется
-        caveMiningBtn.style.display = "none"; // Скрываем кнопку добычи, пока не выберут шахту
-        miningresult.style.display = "none"; // Скрываем результат добычи, пока не выберут шахту
-        miningresult.innerHTML = ""; // Очищаем результат добычи, пока не выберут шахту
-        menuBtn.innerText = "⛏️ Выбор Шахт ▼";
-        
-        caveList.innerHTML = ""; // Очищаем список шахт при открытии интерфейса
 
     } else {
         mineBlock.classList.add("hidden");    // Добавляем класс -> блок исчезает
 
+        // 1. Скрываем результат
+            mineRes.style.display = "none";
+            mineBtn.style.display = "none"; // Скрываем кнопку добычи, если интерфейс шахт скрыт
+
+             // 2. Закрываем меню шахт, если открыто
+            const menuContent = document.getElementById('menuCaveContent');
+            if (menuContent.classList.contains("show")) {
+                menuContent.classList.remove("show");
+                menuBtn.innerText = "⛏️ Выбор Шахт ▼";
+                menuBtn.style.color = "white";
+            }
     }
 }

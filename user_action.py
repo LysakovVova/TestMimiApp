@@ -350,10 +350,6 @@ def mine(user_id: int):
     
     cave_id = result[0]
 
-    if cave_id == 0:
-        conn.close()
-        return {"status": "error", "message": "Вы не находитесь в пещере!"}
-
     cave_name = cursor.execute("SELECT name FROM caves WHERE id = ?", (cave_id,)).fetchone()[0]
 
     # Получаем ресурсы, которые можно добыть в этой пещере

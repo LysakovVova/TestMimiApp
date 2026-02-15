@@ -128,13 +128,8 @@ export function initMenu() {
     alert(data.message);
 
     const data1 = await postJson("/api/choice_cave", { user_id : user_id, cave_id: 0 }); // Сбрасываем выбор пещеры при путешествии 
-    
-    caveMimingBtn.style.display = "none"; // Скрываем кнопку добычи при путешествии
-    caveMiningResult.style.display = "none"; // Скрываем результат добычи при путешествии
-    caveMiningResult.innerHTML = ""; // Очищаем результат добычи при путешествии
   } catch (e) {
     console.error(e);
-    alert("Ошибка связи с кораблем!");
   }
 }
 
