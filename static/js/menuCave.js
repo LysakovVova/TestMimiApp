@@ -13,6 +13,7 @@ export function initCaveMenu() {
     miningresult.style.display = "none"; // Скрываем блок результата при инициализации
     miningresult.innerHTML = ""; // Очищаем текст результата
     caveMiningBtn.style.display = "none"; // Скрываем кнопку добычи при инициализации
+    caveMiningBtn.innerText = `⛏️ Добывать`; // Сбрасываем текст кнопки
 
     if (!menuBtn || !caveList || !menuContent) {
         console.error("Элементы меню шахт не найдены!");
@@ -60,11 +61,9 @@ export function initCaveMenu() {
             // ОТКРЫВАЕМ
             menuContent.classList.add("show"); // Сразу показываем блок
             menuBtn.innerText = "⛏️ Выбор Шахт ▲";
-            
-            // Если список пуст, загружаем данные
-            if (caveList.innerHTML.trim() === "") {
-                await loadCaveData();
-            }
+        
+            caveList.innerHTML.trim() === "";
+            await loadCaveData();
         }
     });
 
@@ -234,24 +233,15 @@ export function initCaveMenu() {
 
         // Если клик был СНАРУЖИ (не в важных элементах)
         if (!isClickInside) {
-            // 1. Скрываем кнопку
-            mineBtn.style.display = 'none';
-            
-            // 2. Скрываем и очищаем результат
-            mineRes.style.display = 'none';
-            mineRes.innerHTML = ''; 
-
-            // 3. (Важно!) Сбрасываем выбранную шахту, чтобы игрок выбрал заново
-            // (Если ты используешь глобальную переменную из прошлого ответа)
-            if (typeof currentSelectedCaveId !== 'undefined') {
-                currentSelectedCaveId = null;
+            // 1. Скрываем результат
+            mineRes.style.display = "none";
+             // 2. Закрываем меню шахт, если открыто
+            const menuContent = document.getElementById('menuCaveContent');
+            if (menuContent.classList.contains("show")) {
+                menuContent.classList.remove("show");
+                const menuBtn = document.getElementById('menuCaveBtn');
+                menuBtn.innerText = "⛏️ Выбор Шахт ▼";
             }
-
-            // 4. Снимаем подсветку с кнопок в списке (для красоты)
-            document.querySelectorAll(".cave-header-btn").forEach(btn => {
-                btn.style.color = "#e94560"; // Возвращаем обычный цвет
-                btn.style.border = "none";
-            });
         }
     });
 }
@@ -259,12 +249,26 @@ export function initCaveMenu() {
 
 export function toggleMineInterface(show) {
     const mineBlock = document.getElementById("mine_interface");
+    const caveMiningBtn = document.getElementById("caveMiningBtn");
+    const miningresult = document.getElementById("miningResult");
+    const menuContent = document.getElementById("menuCaveContent");
+    const caveList = document.getElementById("caveList");
+    const menuBtn = document.getElementById("menuCaveBtn");
+
     
     if (!mineBlock) return; // Защита от ошибок
 
     if (show) {
         mineBlock.classList.remove("hidden"); // Убираем класс -> блок появляется
+        caveMiningBtn.style.display = "none"; // Скрываем кнопку добычи, пока не выберут шахту
+        miningresult.style.display = "none"; // Скрываем результат добычи, пока не выберут шахту
+        miningresult.innerHTML = ""; // Очищаем результат добычи, пока не выберут шахту
+        menuBtn.innerText = "⛏️ Выбор Шахт ▼";
+        
+        caveList.innerHTML = ""; // Очищаем список шахт при открытии интерфейса
+
     } else {
         mineBlock.classList.add("hidden");    // Добавляем класс -> блок исчезает
+
     }
 }
