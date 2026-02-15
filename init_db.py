@@ -12,8 +12,8 @@ def init_planets():
     
     # Добавляем планеты с координатами
     cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (0, "космос", 0, 0)')
-    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (1, "Земля", 10, 10)')
-    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (2, "Марс", -10, -10)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (1, "Земля", 1, 1)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (2, "Марс", -1, -1)')
     
     conn.commit()
     conn.close()
@@ -43,6 +43,21 @@ def init_items():
     conn.commit()
     conn.close()
 
+def init_requirements():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    # Добавляем требования для каждой пещеры
+    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (0, 0, 1)')  # Для пещеры 1 нужно 1 Кристалл
+    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (0, 1, 2)')  # Для пещеры 1 нужно 2 Руды
+    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (1, 2, 1)')  # Для пещеры 2 нужно 1 Драгоценный камень
+    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (1, 3, 3)')  # Для пещеры 2 нужно 3 Металла
+    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (2, 4, 2)')  # Для пещеры 3 нужно 2 Редких минерала
+    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (2, 5, 5)')  # Для пещеры 3 нужно 5 Обычных камней
+    
+    conn.commit()
+    conn.close()
+
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -55,9 +70,11 @@ def init_db():
             coordinate_y INTEGER DEFAULT 0,
             target_planet_id INTEGER DEFAULT 0,
             currently_on_planet_id INTEGER DEFAULT 0,
+            currently_on_cave_id INTEGER DEFAULT 0,
             
             FOREIGN KEY (target_planet_id) REFERENCES planets(id),
-            FOREIGN KEY (currently_on_planet_id) REFERENCES planets(id)
+            FOREIGN KEY (currently_on_planet_id) REFERENCES planets(id),
+            FOREIGN KEY (currently_on_cave_id) REFERENCES caves(id)
         )
     ''')
     cursor.execute('''
@@ -126,9 +143,11 @@ def init_db():
             FOREIGN KEY(item_id) REFERENCES items(id)
         )
     ''')
+
     init_planets()  # Инициализируем планеты
     init_caves()  # Инициализируем пещеры
     init_items()  # Инициализируем предметы
+    init_requirements()  # Инициализируем требования для пещер
     
     conn.commit()
     conn.close()

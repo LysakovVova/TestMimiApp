@@ -278,3 +278,30 @@ def get_user_planet(user_id: int):
     conn.close()
 
     return result[0] if result else None
+
+def choice_cave(user_id: int, cave_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    # Проверяем, разблокирована ли пещера для пользователя
+    cursor.execute("SELECT 1 FROM unlock_caves WHERE user_id = ? AND cave_id = ?", (user_id, cave_id))
+    if not cursor.fetchone():
+        items = cursor.execute('''
+            SELECT items.name, cave_requirements.count
+            FROM cave_requirements
+            JOIN items ON cave_requirements.item_id = items.id
+            WHERE cave_requirements.cave_id = ?
+        ''', (cave_id,)).fetchall()
+        requirements_text = "\n".join([f"{count}x {name}" for name, count in items])
+
+        conn.close()
+
+        return {"status": "error", "message": f"Пещера не разблокирована! Необходимо:\n{requirements_text}"}
+
+    # Если разблокирована, устанавливаем ее как текущую локацию пользователя
+    cursor.execute("UPDATE users SET currently_on_cave_id = ? WHERE user_id = ?", (cave_id, user_id))  # Устанавливаем пещеру
+    
+    conn.commit()
+    conn.close()
+    
+    return {"status": "ok", "message": "Вы вошли в пещеру!"}

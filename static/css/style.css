@@ -102,6 +102,7 @@ p { color: #aeb6bf; }
 
 #user_coordinate {
   margin-top: 5px;       /* Отступ сверху, чтобы меню не прилипало */
+
   transition: all 0.3s;   /* Плавное движение при открытии меню */
   font-size: 20px;        /* Размер шрифта */
   color: white;         /* Цвет (голубой неон) */

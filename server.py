@@ -89,16 +89,16 @@ def get_cave(req: get_caveReg):
     planet_id = user_action.get_user_planet(user_id)
     return user_action.get_cave(user_id, planet_id)
 
-@app.post("/unlock_cave") # Эндпоинт для открытия пещеры, который принимает идентификатор пользователя и идентификатор пещеры, которую он хочет открыть
-def unlock_cave(req: unlock_caveReq):
-    user_id = req.user_id
-    cave_id = req.cave_id
-    return user_action.unlock_cave(user_id, cave_id)
-
 @app.post("/get_used_coordinates")
 def get_used_coordinates(req: offerReq):
     user_id = req.user_id
     return user_action.get_used_coordinates(user_id)
+
+@app.post("/choice_cave")
+def choice_cave(req: unlock_caveReq):
+    user_id = req.user_id
+    cave_id = req.cave_id
+    return user_action.choice_cave(user_id, cave_id)
     
 
 

@@ -57,11 +57,10 @@ export function initCaveMenu() {
                         btn.innerText = `🔒 ${cave.name}`;
                         // btn.disabled = true; // Заблокированная шахта не кликабельна
                     }
-                    btn.innerText = `🔹 ${cave.name}`;
                     
                     btn.onclick = (ev) => {
                         ev.stopPropagation(); 
-                        alert(`Выбрана шахта: ${cave.name}`);
+                        targetMine(cave.id, btn);
                         // Тут логика выбора шахты
                     };
                     caveList.appendChild(btn);
@@ -81,6 +80,30 @@ export function initCaveMenu() {
         menuBtn.innerText = "⛏️ Выбор Шахт ▼";
         menuBtn.style.color = "white";
     }
+
+    async function targetMine(caveId, buttonElement) {
+    try {
+        const userId = getUserId(); // Получаем ID игрока
+        
+        // Отправляем запрос на сервер
+        const data = await postJson("/api/choice_cave", { 
+            user_id: userId, 
+            cave_id: caveId 
+        });
+        if (data.status === "error") {
+            alert(`Ошибка: ${data.message}`);
+            
+            return;
+        }
+        // Если сервер вернул успех
+        alert(`${data.message}`);
+        loadCaveData(); // Обновляем список шахт, чтобы отобразить изменения (например, разблокированные шахты)
+
+    } catch (error) {
+        console.error("Ошибка выбора шахты:", error);
+        alert("Ошибка сети!");
+    }
+}
 
     // Глобальный клик для закрытия (безопасный вариант)
     window.addEventListener("click", (event) => {
