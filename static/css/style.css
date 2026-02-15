@@ -72,50 +72,8 @@ p { color: #aeb6bf; }
   max-width: 400px;
 }
 
-.planet-btn {
-  width: 100%;
-  padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 10px;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  text-align: left;
-  position: relative;
-}
-
-.btn-travel {
-  background: linear-gradient(45deg, #0f3460, #16213e);
-  color: #4cc9f0;
-  border: 1px solid #4cc9f0;
-}
-
-.btn-locked {
-  background-color: #2c2c2c;
-  color: #aaa;
-  border: 1px dashed #555;
-}
-
-.price-tag {
-  font-size: 12px;
-  color: #e94560;
-  display: block;
-  margin-top: 5px;
-}
-
-#get_planet {
-  background-color: #e94560;
-  color: white;
-  border: none;
-  padding: 15px 30px;
-  font-size: 18px;
-  border-radius: 50px;
-  margin-bottom: 20px;
-  cursor: pointer;
-  box-shadow: 0 0 15px rgba(233, 69, 96, 0.5);
-}
 /* Контейнер для предметов (скрыт) */
-.inventory-container {
+.inventory-container, .planet-container {
     display: none; /* Скрыто */
     background-color: #121826; /* Чуть темнее фона меню */
     border-left: 2px solid #e94560; /* Красная полоска слева для красоты */
@@ -123,14 +81,14 @@ p { color: #aeb6bf; }
 }
 
 /* Кнопки самих предметов */
-.inventory-item-btn {
+.inventory-item-btn, .planet-item-btn {
     font-size: 14px;
     padding: 10px;
     color: #aeb6bf;
     border-bottom: 1px dashed #333;
 }
 
-.inventory-item-btn:hover {
+.inventory-item-btn:hover, .planet-item-btn:hover {
     background-color: #1f2a40;
     color: white;
 }

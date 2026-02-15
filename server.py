@@ -95,6 +95,11 @@ def unlock_cave(req: unlock_caveReq):
     user_id = req.user_id
     cave_id = req.cave_id
     return user_action.unlock_cave(user_id, cave_id)
+
+@app.post("/get_used_coordinates")
+def get_used_coordinates(req: offerReq):
+    user_id = req.user_id
+    return user_action.get_used_coordinates(user_id)
     
 
 

@@ -1,11 +1,18 @@
 // js/menu.js
 import { tg, getUserId, postJson } from "./api.js";
+import { updateUserCoordinate } from "./app.js";
 
 export function initMenu() {
   tg.expand();
 
   const menuBtn = document.getElementById("menuBtn");
   const menuContent = document.getElementById("menuContent");
+
+  const inventoryBtn = document.getElementById("inventoryBtn");
+  const inventoryList = document.getElementById("inventoryList");
+
+  const getPlanetBtn = document.getElementById("getPlanetBtn");
+  const getPlanetList = document.getElementById("getPlanetList");
 
   menuBtn.onclick = (e) => {
     e.stopPropagation();
@@ -32,19 +39,16 @@ export function initMenu() {
 
   document.getElementById("reloadBtn").onclick = () => location.reload();
 
-  const inventoryBtn = document.getElementById("inventoryBtn");
-const inventoryList = document.getElementById("inventoryList");
 
-// Функция: Что делать при клике на ПРЕДМЕТ
-async function useItem(itemName, itemCount) {
-    if (confirm(`Использовать предмет "${itemName}"?`)) {
-        // Тут можно отправить запрос на сервер /api/use_item
-        alert(`Вы использовали ${itemName}! (Логику нужно дописать в Python)`);
-        
-        // После использования лучше обновить инвентарь
-        inventoryBtn.click(); // Имитируем клик, чтобы перезагрузить список
+    // Функция: Что делать при клике на ПРЕДМЕТ
+    async function useItem(itemName, itemCount) {
+        if (confirm(`Использовать предмет "${itemName}"?`)) {
+            // Тут можно отправить запрос на сервер /api/use_item
+            alert(`Вы использовали ${itemName}! (Логику нужно дописать в Python)`);
+            
+            // После использования лучше обновить инвентарь
+        }
     }
-}
 
   // Клик по кнопке "Инвентарь"
   inventoryBtn.onclick = async (e) => {
@@ -104,6 +108,87 @@ async function useItem(itemName, itemCount) {
       } catch (error) {
           console.error(error);
           inventoryBtn.innerText = "🎒 Ошибка";
+      }
+  };
+
+
+  async function travelToPlanet(planetId, planetName) {
+  if (!confirm(`Отправиться на ${planetName}?`)) return;
+
+  try {
+    const user_id = getUserId();
+    if (!user_id) return alert("Открыто не из Telegram");
+
+    const data = await postJson("/api/set_target_planet", {
+      user_id,
+      target_planet_id: planetId,
+    });
+    updateUserCoordinate(); // Обновляем координаты после отправки команды
+    alert(data.message);
+  } catch (e) {
+    console.error(e);
+    alert("Ошибка связи с кораблем!");
+  }
+}
+
+  // Клик по кнопке "Сканировать космос"
+  getPlanetBtn.onclick = async (e) => {
+      e.stopPropagation(); // Чтобы меню не закрылось
+
+      // 1. Если список уже открыт — закрываем его
+      if (getPlanetList.style.display === "block") {
+          getPlanetList.style.display = "none";
+          getPlanetBtn.innerText = "🔭 Сканировать космос ▼";
+          return;
+      }
+
+      // 2. Если закрыт — загружаем данные и открываем
+      getPlanetBtn.innerText = "🔭 Загрузка...";
+      
+      try {
+          // Запрос к серверу (как мы делали раньше)
+          const response = await fetch("/api/get_planets", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: tg.initDataUnsafe.user.id })
+          });
+          
+          const data = await response.json();
+
+          // Очищаем старый список
+          getPlanetList.innerHTML = "";
+
+          if (data.planets && data.planets.length > 0) {
+              // Генерируем кнопки для каждого планеты
+              data.planets.forEach(planet => {
+                  const btn = document.createElement("button");
+                  btn.className = "planet-item-btn"; // Наш новый стиль
+                  btn.innerText = `🔹 ${planet.name} (${planet.coordinate_x},${planet.coordinate_y})`;
+                  
+                  // Вешаем событие клика на предмет
+                  btn.onclick = (ev) => {
+                      ev.stopPropagation(); // Чтобы меню не закрылось
+                      travelToPlanet(planet.id, planet.name);
+                  };
+
+                  getPlanetList.appendChild(btn);
+              });
+          } else {
+              // Если пусто
+              const emptyMsg = document.createElement("div");
+              emptyMsg.innerText = "Пусто...";
+              emptyMsg.style.padding = "10px";
+              emptyMsg.style.color = "#555";
+              getPlanetList.appendChild(emptyMsg);
+          }
+
+          // Показываем список
+          getPlanetList.style.display = "block";
+          getPlanetBtn.innerText = "🔭 Сканировать космос ▲"; // Меняем стрелочку
+
+      } catch (error) {
+          console.error(error);
+          getPlanetBtn.innerText = "🔭 Ошибка";
       }
   };
 }
