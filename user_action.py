@@ -103,8 +103,9 @@ def unlock_cave(user_id: int, cave_id: int): # Разблокируем шахт
     except Exception as e:
         conn.rollback() # Отменяем все изменения, если что-то сломалось
         return {"status": "error", "message": "Ошибка БД"}
+    finally:
+        conn.close()
 
-    conn.close()
     return {"status": "ok", "message": "Шахта разблокирована!"}
 
 
@@ -475,8 +476,9 @@ def unlock_ship(user_id: int, ship_id: int):
     except Exception as e:
         conn.rollback() # Отменяем все изменения, если что-то сломалось
         return {"status": "error", "message": "Ошибка БД"}
+    finally:
+        conn.close()
 
-    conn.close()
     return {"status": "ok", "message": "Корабль разблокирован!"}
 
 def choice_ship(user_id: int, ship_id: int):

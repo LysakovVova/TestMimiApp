@@ -53,6 +53,26 @@ export function initMenu() {
     listElement.classList.add("list-fade-in");
   }
 
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function appendWithStagger(container, elements, delayMs = 70) {
+    for (const element of elements) {
+      element.style.opacity = "0";
+      element.style.transform = "translateY(-5px)";
+      element.style.transition = "opacity 0.22s ease, transform 0.22s ease";
+
+      container.appendChild(element);
+      requestAnimationFrame(() => {
+        element.style.opacity = "1";
+        element.style.transform = "translateY(0)";
+      });
+
+      await wait(delayMs);
+    }
+  }
+
 
     // Функция: Что делать при клике на ПРЕДМЕТ
     async function useItem(itemName, itemCount) {
@@ -88,24 +108,23 @@ export function initMenu() {
           
           const data = await response.json();
 
-          // Очищаем старый список
+          // Очищаем старый список и сразу открываем контейнер
           inventoryList.innerHTML = "";
+          animateListOpen(inventoryList);
+          inventoryBtn.innerText = "🎒 Инвентарь ▲";
 
           if (data.items && data.items.length > 0) {
-              // Генерируем кнопки для каждого предмета
-              data.items.forEach(item => {
+              const inventoryButtons = data.items.map((item) => {
                   const btn = document.createElement("button");
-                  btn.className = "cave-item-btn"; // Наш новый стиль
+                  btn.className = "cave-item-btn";
                   btn.innerText = `🔹 ${item.name} (x${item.count})`;
-                  
-                  // Вешаем событие клика на предмет
                   btn.onclick = (ev) => {
-                      ev.stopPropagation(); // Чтобы меню не закрылось
+                      ev.stopPropagation();
                       useItem(item.name, item.count);
                   };
-
-                  inventoryList.appendChild(btn);
+                  return btn;
               });
+              await appendWithStagger(inventoryList, inventoryButtons, 55);
           } else {
               // Если пусто
               const emptyMsg = document.createElement("div");
@@ -114,10 +133,6 @@ export function initMenu() {
               emptyMsg.style.color = "#555";
               inventoryList.appendChild(emptyMsg);
           }
-
-          // Показываем список с анимацией
-          animateListOpen(inventoryList);
-          inventoryBtn.innerText = "🎒 Инвентарь ▲"; // Меняем стрелочку
 
       } catch (error) {
           console.error(error);
@@ -140,7 +155,7 @@ export function initMenu() {
     return getPlanetList.style.display === "block";
   }
 
-  function addPlanetButton(planetId, planetLabel) {
+  function createPlanetButton(planetId, planetLabel) {
     const btn = document.createElement("button");
     btn.className = "planet-item-btn";
     btn.innerText = planetLabel;
@@ -148,7 +163,7 @@ export function initMenu() {
       event.stopPropagation();
       travelToPlanet(planetId, planetLabel.replace(/^🔹\s*/, ""));
     };
-    getPlanetList.appendChild(btn);
+    return btn;
   }
 
   let isTravelInProgress = false;
@@ -218,12 +233,14 @@ export function initMenu() {
     try {
       const data = await postJson("/api/get_planets", { user_id: userId });
       getPlanetList.innerHTML = "";
+      openPlanetList();
 
       if (data.planets && data.planets.length > 0) {
-        data.planets.forEach((planet) => {
-          addPlanetButton(planet.id, `🔹 ${planet.name} (${planet.coordinate_x},${planet.coordinate_y})`);
-        });
-        addPlanetButton(0, "🔹 Открытый космос (стоп)");
+        const planetButtons = data.planets.map((planet) =>
+          createPlanetButton(planet.id, `🔹 ${planet.name} (${planet.coordinate_x},${planet.coordinate_y})`)
+        );
+        planetButtons.push(createPlanetButton(0, "🔹 Открытый космос (стоп)"));
+        await appendWithStagger(getPlanetList, planetButtons, 65);
       } else {
         const emptyMsg = document.createElement("div");
         emptyMsg.innerText = "Пусто...";
@@ -231,8 +248,6 @@ export function initMenu() {
         emptyMsg.style.color = "#555";
         getPlanetList.appendChild(emptyMsg);
       }
-
-      openPlanetList();
     } catch (error) {
       console.error(error);
       getPlanetBtn.innerText = "🔭 Ошибка";

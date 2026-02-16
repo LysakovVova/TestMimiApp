@@ -7,5 +7,4 @@ load_dotenv()  # Загружаем переменные окружения из
 
 user_id = 776659667
 
-for i in range(1, 20):
-    user_action.update_user_inventory(user_id, i, 5)
+print(user_action.mine(user_id))

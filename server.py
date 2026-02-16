@@ -75,7 +75,7 @@ class target_planetReq(BaseModel):
 def set_target_planet(req: target_planetReq):
     user_id = req.user_id
     target_planet_id = req.target_planet_id
-    user_action.choice_cave(user_id, 0) # Сбрасываем выбор шахты при путешествии
+    user_action.create_user(user_id) # Создаем пользователя, если его нет в базе данных
     return user_action.set_target_planet(user_id, target_planet_id)
 
 class unlock_caveReq(BaseModel):
@@ -187,5 +187,12 @@ def mine(req: get_caveReg):
 @app.on_event("startup")
 async def startup_event():
     init_db.init_db()  # Инициализируем базу данных при запуске сервера
+    conn = sqlite3.connect(os.getenv("DB_NAME"))
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA busy_timeout=30000")
+    conn.commit()
+    conn.close()
     asyncio.create_task(worker_of_ivents.gift_worker())
     asyncio.create_task(worker_of_coordinate.coordinate_worker())
