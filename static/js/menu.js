@@ -14,6 +14,13 @@ export function initMenu() {
   const getPlanetBtn = document.getElementById("getPlanetBtn");
   const getPlanetList = document.getElementById("getPlanetList");
 
+  const requirementsBtn = document.getElementById("requirementsBtn");
+  const requirementsList = document.getElementById("requirementsList");
+
+  const choiceShipBtn = document.getElementById("choiceShipBtn");
+  const choiceShipList = document.getElementById("choiceShipList");
+  const menuShipContent = document.getElementById("menuShipContent");
+
   menuBtn.onclick = (e) => {
     e.stopPropagation();
     menuContent.classList.toggle("show");
@@ -38,6 +45,13 @@ export function initMenu() {
   };
 
   document.getElementById("reloadBtn").onclick = () => location.reload();
+
+  function animateListOpen(listElement) {
+    listElement.style.display = "block";
+    listElement.classList.remove("list-fade-in");
+    void listElement.offsetWidth;
+    listElement.classList.add("list-fade-in");
+  }
 
 
     // Функция: Что делать при клике на ПРЕДМЕТ
@@ -101,8 +115,8 @@ export function initMenu() {
               inventoryList.appendChild(emptyMsg);
           }
 
-          // Показываем список
-          inventoryList.style.display = "block";
+          // Показываем список с анимацией
+          animateListOpen(inventoryList);
           inventoryBtn.innerText = "🎒 Инвентарь ▲"; // Меняем стрелочку
 
       } catch (error) {
@@ -111,96 +125,263 @@ export function initMenu() {
       }
   };
 
-
-  async function travelToPlanet(planetId, planetName) {
-  if (!confirm(`Отправиться на ${planetName}?`)) return;
-
-  try {
-    const user_id = getUserId();
-    if (!user_id) return alert("Открыто не из Telegram");
-
-    const data = await postJson("/api/set_target_planet", {
-      user_id,
-      target_planet_id: planetId,
-    });
-    updateUserCoordinate(); // Обновляем координаты после отправки команды
-
-    alert(data.message);
-
-    const data1 = await postJson("/api/choice_cave", { user_id : user_id, cave_id: 0 }); // Сбрасываем выбор пещеры при путешествии 
-  } catch (e) {
-    console.error(e);
+  function closePlanetList() {
+    getPlanetList.style.display = "none";
+    getPlanetList.classList.remove("list-fade-in");
+    getPlanetBtn.innerText = "🔭 Сканировать космос ▼";
   }
-}
+
+  function openPlanetList() {
+    animateListOpen(getPlanetList);
+    getPlanetBtn.innerText = "🔭 Сканировать космос ▲";
+  }
+
+  function isPlanetListOpen() {
+    return getPlanetList.style.display === "block";
+  }
+
+  function addPlanetButton(planetId, planetLabel) {
+    const btn = document.createElement("button");
+    btn.className = "planet-item-btn";
+    btn.innerText = planetLabel;
+    btn.onclick = (event) => {
+      event.stopPropagation();
+      travelToPlanet(planetId, planetLabel.replace(/^🔹\s*/, ""));
+    };
+    getPlanetList.appendChild(btn);
+  }
+
+  let isTravelInProgress = false;
+  async function travelToPlanet(planetId, planetName) {
+    if (isTravelInProgress) return;
+    isTravelInProgress = true;
+
+    const isConfirmed = confirm(`Отправиться на ${planetName}?`);
+    if (!isConfirmed) {
+      isTravelInProgress = false;
+      return;
+    }
+
+    const userId = getUserId();
+    if (!userId) {
+      alert("Открыто не из Telegram");
+      isTravelInProgress = false;
+      return;
+    }
+
+    closePlanetList();
+
+    try {
+      getPlanetBtn.innerText = "🔭 Путешествие...";
+
+      const data = await postJson("/api/set_target_planet", {
+        user_id: userId,
+        target_planet_id: planetId,
+      });
+
+      const status = data?.status || data?.result || "ok";
+      alert(data?.message || (status === "error" ? "Не удалось установить цель планеты" : "Команда отправлена."));
+      if (status === "error") return;
+
+      await updateUserCoordinate();
+
+      // Сбрасываем выбор шахты при путешествии, но не мешаем основному действию
+      postJson("/api/choice_cave", { user_id: userId, cave_id: 0 }).catch((resetErr) => {
+        console.warn("Не удалось сбросить выбор шахты:", resetErr);
+      });
+    } catch (error) {
+      console.error(error);
+      alert(`Ошибка: ${error.message || "не удалось выполнить запрос"}`);
+    } finally {
+      isTravelInProgress = false;
+      closePlanetList();
+    }
+  }
 
   // Клик по кнопке "Сканировать космос"
   getPlanetBtn.onclick = async (e) => {
-      e.stopPropagation(); // Чтобы меню не закрылось
+    e.stopPropagation();
 
-      // 1. Если список уже открыт — закрываем его
-      if (getPlanetList.style.display === "block") {
-          getPlanetList.style.display = "none";
-          getPlanetBtn.innerText = "🔭 Сканировать космос ▼";
-          return;
+    if (isPlanetListOpen()) {
+      closePlanetList();
+      return;
+    }
+
+    const userId = getUserId();
+    if (!userId) {
+      alert("Открыто не из Telegram");
+      return;
+    }
+
+    getPlanetBtn.innerText = "🔭 Загрузка...";
+
+    try {
+      const data = await postJson("/api/get_planets", { user_id: userId });
+      getPlanetList.innerHTML = "";
+
+      if (data.planets && data.planets.length > 0) {
+        data.planets.forEach((planet) => {
+          addPlanetButton(planet.id, `🔹 ${planet.name} (${planet.coordinate_x},${planet.coordinate_y})`);
+        });
+        addPlanetButton(0, "🔹 Открытый космос (стоп)");
+      } else {
+        const emptyMsg = document.createElement("div");
+        emptyMsg.innerText = "Пусто...";
+        emptyMsg.style.padding = "10px";
+        emptyMsg.style.color = "#555";
+        getPlanetList.appendChild(emptyMsg);
       }
 
-      // 2. Если закрыт — загружаем данные и открываем
-      getPlanetBtn.innerText = "🔭 Загрузка...";
-      
-      try {
-          // Запрос к серверу (как мы делали раньше)
-          const response = await fetch("/api/get_planets", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id: tg.initDataUnsafe.user.id })
-          });
-          
-          const data = await response.json();
-
-          // Очищаем старый список
-          getPlanetList.innerHTML = "";
-
-          if (data.planets && data.planets.length > 0) {
-              // Генерируем кнопки для каждого планеты
-              data.planets.forEach(planet => {
-                  const btn = document.createElement("button");
-                  btn.className = "planet-item-btn"; // Наш новый стиль
-                  btn.innerText = `🔹 ${planet.name} (${planet.coordinate_x},${planet.coordinate_y})`;
-                  
-                  // Вешаем событие клика на предмет
-                  btn.onclick = (ev) => {
-                      ev.stopPropagation(); // Чтобы меню не закрылось
-                      travelToPlanet(planet.id, planet.name);
-                  };
-
-                  getPlanetList.appendChild(btn);
-              });
-
-              const btn = document.createElement("button");
-              btn.className = "planet-item-btn"; // Наш новый стиль
-              btn.innerText = `🔹 Открытый космос (стоп)`;
-              btn.onclick = (ev) => {
-                      ev.stopPropagation(); // Чтобы меню не закрылось
-                      travelToPlanet(0, "Открытый космос");
-                  };
-                getPlanetList.appendChild(btn);
-
-          } else {
-              // Если пусто
-              const emptyMsg = document.createElement("div");
-              emptyMsg.innerText = "Пусто...";
-              emptyMsg.style.padding = "10px";
-              emptyMsg.style.color = "#555";
-              getPlanetList.appendChild(emptyMsg);
-          }
-
-          // Показываем список
-          getPlanetList.style.display = "block";
-          getPlanetBtn.innerText = "🔭 Сканировать космос ▲"; // Меняем стрелочку
-
-      } catch (error) {
-          console.error(error);
-          getPlanetBtn.innerText = "🔭 Ошибка";
-      }
+      openPlanetList();
+    } catch (error) {
+      console.error(error);
+      getPlanetBtn.innerText = "🔭 Ошибка";
+    }
   };
+
+  choiceShipBtn.onclick = async (e) => {
+    e.stopPropagation();
+
+    const isHidden = menuShipContent.style.display === "none";
+    if (isHidden) {
+      menuShipContent.style.display = "block";
+      choiceShipBtn.innerText = "🔍 Выбор Корабля ▲";
+      await loadChoiceShipData();
+    } else {
+      closeShipMenu();
+    }
+  };
+
+  function closeShipMenu() {
+    menuShipContent.style.display = "none";
+    choiceShipList.style.display = "none";
+    choiceShipBtn.innerText = "🔍 Выбор Корабля ▼";
+  }
+
+  async function loadChoiceShipData() {
+    choiceShipList.style.display = "block";
+    choiceShipList.innerHTML = '<div style="padding:10px; color:#aaa;">⏳ Поиск кораблей...</div>';
+
+    try {
+      const userId = getUserId();
+      const data = await postJson("/api/get_ship", { user_id: userId });
+      choiceShipList.innerHTML = "";
+
+      if (!data.ships || data.ships.length === 0) {
+        choiceShipList.innerHTML = '<div style="padding:10px;">Корабли не найдены.</div>';
+        return;
+      }
+
+      for (const ship of data.ships) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "cave-accordion-item";
+
+        const headerBtn = document.createElement("button");
+        headerBtn.className = "cave-header-btn";
+        const icon = ship.is_unlocked ? "🚀" : "🔒";
+        headerBtn.innerHTML = `🔹 <span>${ship.name}</span> <span>${icon}</span>`;
+
+        const detailsDiv = document.createElement("div");
+        detailsDiv.className = "cave-details";
+
+        if (ship.is_unlocked) {
+          const desc = document.createElement("p");
+          desc.innerText = "Корабль готов к полету.";
+
+          const selectBtn = document.createElement("button");
+          selectBtn.className = "select-mine-btn";
+          selectBtn.innerText = "✅ ВЫБРАТЬ ЭТОТ КОРАБЛЬ";
+          selectBtn.onclick = (event) => {
+            event.stopPropagation();
+            targetShip(ship.id, headerBtn);
+          };
+
+          detailsDiv.appendChild(desc);
+          detailsDiv.appendChild(selectBtn);
+        } else {
+          const lockedText = document.createElement("div");
+          lockedText.innerHTML = "<strong>Требования:</strong>";
+
+          const costList = document.createElement("ul");
+          costList.className = "unlock-cost-list";
+          costList.innerHTML = "<li>⏳ Загрузка требований...</li>";
+
+          detailsDiv.appendChild(lockedText);
+          detailsDiv.appendChild(costList);
+
+          const createUnlockButton = () => {
+            const unlockBtn = document.createElement("button");
+            unlockBtn.className = "unlock-ship-btn";
+            unlockBtn.innerText = "🛠 РАЗБЛОКИРОВАТЬ";
+            unlockBtn.onclick = async (event) => {
+              event.stopPropagation();
+              if (!confirm(`Разблокировать ${ship.name}?`)) return;
+
+              const res = await postJson("/api/unlock_ship", { user_id: userId, ship_id: ship.id });
+              alert(res.message);
+              if (res.status === "ok") {
+                loadChoiceShipData();
+              }
+            };
+            return unlockBtn;
+          };
+
+          try {
+            const shipInfo = await postJson("/api/get_ship_info", { ship_id: ship.id });
+            costList.innerHTML = "";
+
+            if (shipInfo.requirements && shipInfo.requirements.length > 0) {
+              shipInfo.requirements.forEach((req) => {
+                const li = document.createElement("li");
+                li.innerText = `- ${req.item_name}: ${req.count}`;
+                costList.appendChild(li);
+              });
+            } else {
+              costList.innerHTML = "<li>Бесплатный</li>";
+            }
+
+            detailsDiv.appendChild(createUnlockButton());
+          } catch (err) {
+            costList.innerHTML = "<li>Ошибка получения цены</li>";
+          }
+        }
+
+        headerBtn.onclick = (event) => {
+          event.stopPropagation();
+          document.querySelectorAll(".cave-details").forEach((el) => {
+            if (el !== detailsDiv) el.classList.remove("open");
+          });
+          detailsDiv.classList.toggle("open");
+        };
+
+        wrapper.appendChild(headerBtn);
+        wrapper.appendChild(detailsDiv);
+        choiceShipList.appendChild(wrapper);
+      }
+    } catch (e) {
+      console.error(e);
+      choiceShipList.innerHTML = '<div style="color:red; padding:10px;">Ошибка загрузки списка!</div>';
+    }
+  }
+
+  async function targetShip(shipId, buttonElement) {
+    try {
+      const userId = getUserId(); // Получаем ID игрока
+
+      const data = await postJson("/api/choice_ship", {
+        user_id: userId,
+        ship_id: shipId
+      });
+      if (data.status === "error") {
+        alert(`Ошибка: ${data.message}`);
+        return;
+      }
+
+      alert(`${data.message}`);
+    } catch (error) {
+      console.error("Ошибка выбора корабля:", error);
+      alert("Ошибка сети!");
+    }
+  }
+
 }

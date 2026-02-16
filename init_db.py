@@ -13,7 +13,15 @@ def init_planets():
     # Добавляем планеты с координатами
     cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (0, "космос", 0, 0)')
     cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (1, "Земля", 1, 1)')
-    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (2, "Марс", -1, -1)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (2, "Меркурий", -1, -1)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (3, "Венера", 1, -1)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (4, "Марс", 2, 2)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (5, "Юпитер", 3, -3)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (6, "Сатурн", 3, 3)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (7, "Уран", 4, 4)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (8, "Нептун", -4, 4)')
+    cursor.execute('INSERT OR IGNORE INTO planets (id, name, coordinate_x, coordinate_y) VALUES (9, "Плутон", 5, 5)')
+
     
     conn.commit()
     conn.close()
@@ -28,17 +36,64 @@ def init_caves():
     
     conn.commit()
     conn.close()
-def init_items():
+def item_space():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # Добавляем предметы для каждой пещеры
-    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, cave_id, chance) VALUES (0, "Кристалл", 100, 0, 0.5)')
-    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, cave_id, chance) VALUES (1, "Руда", 50, 0, 0.7)')
-    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, cave_id, chance) VALUES (2, "Драгоценный камень", 200, 1, 0.3)')
-    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, cave_id, chance) VALUES (3, "Металл", 80, 1, 0.6)')
-    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, cave_id, chance) VALUES (4, "Редкий минерал", 150, 2, 0.4)')
-    cursor.execute('INSERT OR IGNORE INTO items (id, name, price, cave_id, chance) VALUES (5, "Обычный камень", 20, 2, 0.8)')
+    # Добавляем предметы для космоса (планета_id = 0)
+    # rank 1
+    range_1_items = [
+        (0, "Металлические фрагменты", 0, 1),
+        (1, "Проводящие пластины", 0, 1),
+        (2, "Обгоревшие микросхемы", 0, 1),
+        (3, "Топливные баки-осколки", 0, 1),
+        (4, "Разрушенные панели", 0, 1),
+    ]
+    range_2_items = [
+        (5, "Ионные катушки", 0, 2),
+        (6, "Повреждённые навигационные ядра", 0, 2),
+        (7, "Кристаллы стабилизации", 0, 2),
+        (8, "Фрагменты гиперсплава", 0, 2),
+        (9, "Реакторные оболочки", 0, 2),
+    ]
+    range_3_items = [
+        (10, "Ядро древнего дрона", 0, 3),
+        (11, "Осколок варп-кольца", 0, 3),
+        (12, "Стабилизатор сингулярности", 0, 3),
+        (13, "Тёмный энергетический модуль", 0, 3),
+        (14, "Хроно-фрагмент", 0, 3),
+    ]
+    range_4_items = [
+        (15, "Фрагмент портального двигателя", 0, 4),
+        (16, "Сердечник неизвестного крейсера", 0, 4),
+        (17, "Кристалл искажённого пространства", 0, 4),
+        (18, "Омни-процессор", 0, 4),
+        (19, "Обломок межзвёздного ковчега", 0, 4),
+    ]
+    for item in range_1_items + range_2_items + range_3_items + range_4_items:
+        cursor.execute('INSERT OR IGNORE INTO items (id, name, cave_id, range) VALUES (?, ?, ?, ?)', item)
+    conn.commit()
+    conn.close()
+def init_items():
+    item_space()  # Инициализируем предметы для космоса
+def init_spaceship():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    # Инициализируем данные для космического корабля (можно добавить больше кораблей и их требований)
+
+    ships =[
+        ("Орбитальный Кораблт",       1, 1, 200),
+        ("Тяжёлый носитель",          2, 1, 400),
+        ("Межпланетный корабль",      3, 2, 400),
+        ("Гипердвигательный корабль", 4, 2, 600),
+        ("Межзвёздный крейсер",       5, 3, 800),
+    ]
+
+    for ship in ships:
+        cursor.execute('INSERT OR IGNORE INTO spaceship (name, ship_id, speed, carrying_capacity) VALUES (?, ?, ?, ?)', ship)
+
+
     
     conn.commit()
     conn.close()
@@ -46,14 +101,6 @@ def init_items():
 def init_requirements():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    
-    # Добавляем требования для каждой пещеры
-    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (0, 0, 1)')  # Для пещеры 1 нужно 1 Кристалл
-    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (0, 1, 2)')  # Для пещеры 1 нужно 2 Руды
-    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (1, 2, 1)')  # Для пещеры 2 нужно 1 Драгоценный камень
-    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (1, 3, 3)')  # Для пещеры 2 нужно 3 Металла
-    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (2, 4, 2)')  # Для пещеры 3 нужно 2 Редких минерала
-    cursor.execute('INSERT OR IGNORE INTO cave_requirements (cave_id, item_id, count) VALUES (2, 5, 5)')  # Для пещеры 3 нужно 5 Обычных камней
     
     conn.commit()
     conn.close()
@@ -71,7 +118,9 @@ def init_db():
             target_planet_id INTEGER DEFAULT 0,
             currently_on_planet_id INTEGER DEFAULT 0,
             currently_on_cave_id INTEGER DEFAULT 0,
+            space_ship_id INTEGER DEFAULT 0,
             
+            FOREIGN KEY (space_ship_id) REFERENCES spaceship(ship_id),
             FOREIGN KEY (target_planet_id) REFERENCES planets(id),
             FOREIGN KEY (currently_on_planet_id) REFERENCES planets(id),
             FOREIGN KEY (currently_on_cave_id) REFERENCES caves(id)
@@ -84,6 +133,7 @@ def init_db():
             price INTEGER DEFAULT 0,
             cave_id INTEGER,
             chance REAL DEFAULT 0,
+            range INTEGER DEFAULT 0,
             FOREIGN KEY (cave_id) REFERENCES caves(id)
         )
     ''')
@@ -145,10 +195,52 @@ def init_db():
         )
     ''')
 
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS spaceship (
+            name TEXT,
+            ship_id INTEGER PRIMARY KEY,
+            speed INTEGER DEFAULT 1,
+            carrying_capacity INTEGER DEFAULT 200
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS spaceship_requirements (
+            ship_id INTEGER,
+            item_id INTEGER,
+            count INTEGER,
+            FOREIGN KEY (ship_id) REFERENCES spaceship(ship_id),
+            FOREIGN KEY (item_id) REFERENCES items(id),
+            PRIMARY KEY (ship_id, item_id)
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS unlock_spaceship (
+            user_id INTEGER,
+            ship_id INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (ship_id) REFERENCES spaceship(ship_id),
+            PRIMARY KEY (user_id, ship_id)
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS item_requirements (
+            item_id INTEGER,
+            required_item_id INTEGER,
+            count INTEGER,
+            FOREIGN KEY (item_id) REFERENCES items(id),
+            FOREIGN KEY (required_item_id) REFERENCES items(id),
+            PRIMARY KEY (item_id, required_item_id)
+        )
+    ''')
+
     init_planets()  # Инициализируем планеты
     init_caves()  # Инициализируем пещеры
     init_items()  # Инициализируем предметы
     init_requirements()  # Инициализируем требования для пещер
+    init_spaceship()  # Инициализируем данные для космического корабля
     
     conn.commit()
     conn.close()

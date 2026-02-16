@@ -7,10 +7,15 @@ load_dotenv()  # Загружаем переменные окружения из
 
 DB_NAME = os.getenv("DB_NAME")
 
-user = 1237801493
-user_action.update_user_inventory(user, 0, 5)
-user_action.update_user_inventory(user, 1, 5)
-user_action.update_user_inventory(user, 2, 5)
-user_action.update_user_inventory(user, 3, 5)
-user_action.update_user_inventory(user, 4, 5)
-user_action.update_user_inventory(user, 5, 5)
+user_id = 776659667
+
+conn = sqlite3.connect(DB_NAME)
+cursor = conn.cursor()
+
+cursor.execute("UPDATE users SET coordinate_x = ?, coordinate_y = ? WHERE user_id = ?", (15, 15, user_id))
+conn.commit()
+conn.close()
+
+print(user_action.get_ships(user_id), sep="\n")
+
+print(user_action.get_ship_info(1), sep="\n")

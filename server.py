@@ -75,6 +75,7 @@ class target_planetReq(BaseModel):
 def set_target_planet(req: target_planetReq):
     user_id = req.user_id
     target_planet_id = req.target_planet_id
+    user_action.choice_cave(user_id, 0) # Сбрасываем выбор шахты при путешествии
     return user_action.set_target_planet(user_id, target_planet_id)
 
 class unlock_caveReq(BaseModel):
@@ -89,6 +90,13 @@ def get_cave(req: get_caveReg):
     planet_id = user_action.get_user_planet(user_id)
     return user_action.get_cave(user_id, planet_id)
 
+class get_shipReg(BaseModel):
+    user_id: int
+@app.post("/get_ship")
+def get_ship(req: get_shipReg):
+    user_id = req.user_id
+    return user_action.get_ships(user_id)
+
 @app.post("/get_used_coordinates")
 def get_used_coordinates(req: offerReq):
     user_id = req.user_id
@@ -100,17 +108,49 @@ def choice_cave(req: unlock_caveReq):
     cave_id = req.cave_id
     return user_action.choice_cave(user_id, cave_id)
 
+class unlock_shipReq(BaseModel):
+    user_id: int
+    ship_id: int
+
+@app.post("/choice_ship")
+def choice_ship(req: unlock_shipReq):
+    user_id = req.user_id
+    ship_id = req.ship_id
+    return user_action.choice_ship(user_id, ship_id)
+
 @app.post("/unlock_cave")
 def unlock_cave(req: unlock_caveReq):
     user_id = req.user_id
     cave_id = req.cave_id
     return user_action.unlock_cave(user_id, cave_id)
 
+
+
+@app.post("/unlock_ship")
+def unlock_ship(req: unlock_shipReq):
+    user_id = req.user_id
+    ship_id = req.ship_id
+    return user_action.unlock_ship(user_id, ship_id)
+
 @app.post("/get_cave_info")
 def get_cave_info(req: unlock_caveReq):
     user_id = req.user_id
     cave_id = req.cave_id
     return user_action.get_cave_info(cave_id)
+
+class unlock_shipReq(BaseModel):
+    ship_id: int
+
+@app.post("/get_ship_info")
+def get_ship_info(req: unlock_shipReq):
+    ship_id = req.ship_id
+    return user_action.get_ship_info(ship_id)
+
+@app.post("/use_item")
+def use_item(req: unlock_caveReq):
+    user_id = req.user_id
+    item_id = req.cave_id
+    return user_action.use_item(user_id, item_id)
 
 @app.post("/mine_cave")
 def mine(req: get_caveReg):

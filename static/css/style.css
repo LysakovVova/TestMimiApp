@@ -87,6 +87,10 @@ p { color: #aeb6bf; }
     margin-left: 10px; /* Отступ слева (лесенка) */
 }
 
+.list-fade-in {
+    animation: fadeIn 0.3s;
+}
+
 /* Кнопки самих предметов */
 .inventory-item-btn, .planet-item-btn, .cave-item-btn {
     font-size: 14px;
@@ -168,6 +172,20 @@ p { color: #aeb6bf; }
     margin-top: 5px;
 }
 .select-mine-btn:hover { background-color: #00aaff; }
+
+/* Кнопка "РАЗБЛОКИРОВАТЬ" */
+.unlock-ship-btn {
+    width: 100%;
+    padding: 10px;
+    background-color: #f2a33a;
+    color: #1a1a2e;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 5px;
+}
+.unlock-ship-btn:hover { background-color: #e59327; }
 
 /* Список ресурсов для разблокировки */
 .unlock-cost-list {

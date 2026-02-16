@@ -9,30 +9,40 @@ DB_NAME = os.getenv("DB_NAME")
 async def gift_worker():
     while True:
         # 1. Ждем 10 секунд перед следующей раздачей (для теста, потом поставь больше)
-        await asyncio.sleep(30) 
+        await asyncio.sleep(600)  # 600 секунд = 10 минут
         
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         
         # Берем всех юзеров
-        cursor.execute("SELECT user_id, currently_on_planet_id FROM users")
+        cursor.execute("SELECT user_id, coordinate_x, coordinate_y, currently_on_planet_id FROM users")
         users = cursor.fetchall()
         
         # Список возможных подарков (id, name, planet_id)
         
         for user in users:
             user_id = user[0]
-            currently_on_planet_id = user[1]
+            user_coordinates = (user[1], user[2])
+            currently_on_planet_id = user[3]
 
             if currently_on_planet_id != 0:
                 continue  # Если юзер не на планете, пропускаем его
 
             # Список возможных подарков (id, name, planet_id)
-            possible_gifts = cursor.execute("SELECT id, name, cave_id FROM items WHERE cave_id = ?", (0,)).fetchall()
-            
-            if not possible_gifts:
-                continue  # Если нет подарков для этой планеты, пропускаем пользователя
 
+            range = 1
+
+            if (max(abs(user_coordinates[0]), abs(user_coordinates[1])) > 0):  # 0-10
+                range = 1
+            if (max(abs(user_coordinates[0]), abs(user_coordinates[1])) > 10):  # 10-20
+                range = 2
+            if (max(abs(user_coordinates[0]), abs(user_coordinates[1])) > 20):  # 20-30
+                range = 3
+            if (max(abs(user_coordinates[0]), abs(user_coordinates[1])) > 30):  # -30 и дальше
+                range = 4
+
+            possible_gifts = cursor.execute("SELECT id, name, cave_id, range FROM items WHERE cave_id = ? AND range <= ?", (0, range)).fetchall()
+            
             gift = random.choice(possible_gifts)
             
             # Сначала удаляем старое (оно сгорает!)
