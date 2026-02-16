@@ -268,7 +268,7 @@ def get_cave_info(cave_id: int): # Получаем информацию о пе
     
     req_list = []
     for item_id, count in requirements:
-        item_name = cursor.execute("SELECT name FROM items WHERE id = ?", (item_id,)).fetchone()[0]
+        item_name = cursor.execute("SELECT name FROM items WHERE id = ? ORDER BY id ASC", (item_id,)).fetchone()[0]
         req_list.append({"item_id": item_id, "item_name": item_name, "count": count})
 
     conn.close()
@@ -383,9 +383,11 @@ def mine(user_id: int): #
         return {"status": "error", "message": "В этой пещере нет ресурсов для добычи!"}
 
     result_items = {}
-    for _ in range(5):
+    for _ in range(30):
         for item_name in roll_independent(resources):
             result_items[item_name] = result_items.get(item_name, 0) + 1
+            item_id = cursor.execute("SELECT id FROM items WHERE name = ?", (item_name,)).fetchone()[0]
+            update_user_inventory(user_id, item_id, 1)
 
     conn.close()
     return {

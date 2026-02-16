@@ -9,7 +9,7 @@ DB_NAME = os.getenv("DB_NAME")
 async def gift_worker():
     while True:
         # 1. Ждем 10 секунд перед следующей раздачей (для теста, потом поставь больше)
-        await asyncio.sleep(600)  # 600 секунд = 10 минут
+        await asyncio.sleep(60)  # 600 секунд = 10 минут
         conn = None
         try:
             conn = sqlite3.connect(DB_NAME, timeout=30)
@@ -25,7 +25,7 @@ async def gift_worker():
                 user_coordinates = (user[1], user[2])
                 currently_on_planet_id = user[3]
 
-                if currently_on_planet_id != 0:
+                if currently_on_planet_id != 0 or random.random() > 0.5:  # Если юзер не на планете или не прошел по вероятности, пропускаем его
                     continue  # Если юзер не на планете, пропускаем его
 
                 gift_range = 1
