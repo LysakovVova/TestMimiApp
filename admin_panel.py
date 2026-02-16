@@ -7,7 +7,7 @@ load_dotenv()  # Загружаем переменные окружения из
 
 DB_NAME = os.getenv("DB_NAME")
 
-user = 797667496
+user = 1237801493
 user_action.update_user_inventory(user, 0, 5)
 user_action.update_user_inventory(user, 1, 5)
 user_action.update_user_inventory(user, 2, 5)

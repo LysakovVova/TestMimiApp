@@ -175,6 +175,16 @@ export function initMenu() {
 
                   getPlanetList.appendChild(btn);
               });
+
+              const btn = document.createElement("button");
+              btn.className = "planet-item-btn"; // Наш новый стиль
+              btn.innerText = `🔹 Открытый космос (стоп)`;
+              btn.onclick = (ev) => {
+                      ev.stopPropagation(); // Чтобы меню не закрылось
+                      travelToPlanet(0, "Открытый космос");
+                  };
+                getPlanetList.appendChild(btn);
+
           } else {
               // Если пусто
               const emptyMsg = document.createElement("div");

@@ -52,10 +52,77 @@ export async function updateUserCoordinate() {
     }
 }
 
+export async function updateIvent() {
+    const modalText = document.getElementById("modalText");
+    const modalBtnYes = document.getElementById("modalBtnYes");
+    const modalBtnNo = document.getElementById("modalBtnNo");
+    const modalWindow = document.getElementById("choiceModal");
+
+    // Если элементы не найдены, выходим, чтобы не было ошибок
+    if (!modalText || !modalBtnYes || !modalBtnNo) {
+        console.error("Ошибка: Элементы модального окна не найдены в HTML!");
+        return;
+    }
+
+    const user_id = getUserId();
+    if (!user_id) return;
+
+    try {
+        // 1. Проверяем, есть ли находка
+        const data = await fetch("/api/check_offer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: user_id })
+        });
+
+        const result = await data.json();
+
+        // 2. Если находка есть
+        if (result.has_offer) {
+            
+            // Заполняем текст
+            modalText.innerText = `Найдено ${result.name} : ${result.count} шт.`;
+            
+            // Показываем окно
+            modalWindow.classList.remove("hidden");
+
+            modalBtnYes.onclick = async () => {
+                try {
+                    // Блокируем кнопку, чтобы не нажал дважды
+                    modalBtnYes.disabled = true; 
+                    
+                    const response = await postJson("/api/accept_offer", { user_id: user_id });
+                        alert(`✅ Вы забрали предмет!\n${response.message}`);
+                        modalWindow.classList.add("hidden"); // Закрываем только после успеха
+                } catch (e) {
+                    console.error(e);
+                } finally {
+                    modalBtnYes.disabled = false; // Разблокируем кнопку
+                }
+            };
+
+            // --- ОБРАБОТЧИК КНОПКИ "ОТКАЗАТЬСЯ" ---
+            modalBtnNo.onclick = async () => {
+                modalWindow.classList.add("hidden");
+                // Тут можно добавить запрос на отказ, если нужно очистить событие на сервере
+                const response = await postJson("/api/decline_offer", { user_id: user_id });
+            };
+
+        } else {
+            // Если предложений нет, скрываем окно (на случай если оно висело)
+            modalWindow.classList.add("hidden");
+        }
+
+    } catch (e) {
+        console.error("Ошибка сети при проверке событий:", e);
+    }
+}
+
 // Запускаем один раз сразу при загрузке...
 updateUserCoordinate();
-
+updateIvent();
 // ...и потом каждые 10 секунд
 setInterval(() => {
     updateUserCoordinate();
+    updateIvent();
 }, 10000);

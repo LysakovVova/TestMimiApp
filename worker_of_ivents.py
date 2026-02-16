@@ -24,8 +24,11 @@ async def gift_worker():
             user_id = user[0]
             currently_on_planet_id = user[1]
 
+            if currently_on_planet_id != 0:
+                continue  # Если юзер не на планете, пропускаем его
+
             # Список возможных подарков (id, name, planet_id)
-            possible_gifts = cursor.execute("SELECT id, name, cave_id FROM items WHERE cave_id = ?", (currently_on_planet_id,)).fetchall()
+            possible_gifts = cursor.execute("SELECT id, name, cave_id FROM items WHERE cave_id = ?", (0,)).fetchall()
             
             if not possible_gifts:
                 continue  # Если нет подарков для этой планеты, пропускаем пользователя
