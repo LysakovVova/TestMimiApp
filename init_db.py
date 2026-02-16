@@ -101,7 +101,51 @@ def init_spaceship():
 def init_requirements():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    
+
+    craft_recipes = [
+        # range 2 из range 1
+        (5, 0, 5),
+        (5, 1, 5),
+        (6, 1, 5),
+        (6, 2, 5),
+        (7, 2, 5),
+        (7, 3, 5),
+        (8, 3, 5),
+        (8, 4, 5),
+        (9, 0, 4),
+        (9, 4, 6),
+
+        # range 3 из range 2
+        (10, 5, 3),
+        (10, 6, 2),
+        (11, 6, 3),
+        (11, 7, 2),
+        (12, 7, 3),
+        (12, 8, 2),
+        (13, 8, 3),
+        (13, 9, 2),
+        (14, 5, 2),
+        (14, 9, 3),
+
+        # range 4 из range 3
+        (15, 10, 2),
+        (15, 11, 2),
+        (16, 11, 2),
+        (16, 12, 2),
+        (17, 12, 2),
+        (17, 13, 2),
+        (18, 13, 2),
+        (18, 14, 2),
+        (19, 10, 1),
+        (19, 14, 3),
+    ]
+
+    for recipe in craft_recipes:
+        cursor.execute(
+            'INSERT OR IGNORE INTO item_requirements (item_id, required_item_id, count) VALUES (?, ?, ?)',
+            recipe,
+        )
+
     conn.commit()
     conn.close()
 

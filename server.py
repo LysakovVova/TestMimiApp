@@ -146,6 +146,30 @@ def get_ship_info(req: unlock_shipReq):
     ship_id = req.ship_id
     return user_action.get_ship_info(ship_id)
 
+
+class createItemListReq(BaseModel):
+    user_id: int
+
+
+@app.post("/get_create_items")
+def get_create_items(req: createItemListReq):
+    return user_action.get_create_items(req.user_id)
+
+
+class createItemInfoReq(BaseModel):
+    user_id: int
+    item_id: int
+
+
+@app.post("/get_create_item_info")
+def get_create_item_info(req: createItemInfoReq):
+    return user_action.get_create_item_info(req.item_id, req.user_id)
+
+
+@app.post("/create_item")
+def create_item(req: createItemInfoReq):
+    return user_action.create_item(req.user_id, req.item_id)
+
 @app.post("/use_item")
 def use_item(req: unlock_caveReq):
     user_id = req.user_id
@@ -165,4 +189,3 @@ async def startup_event():
     init_db.init_db()  # Инициализируем базу данных при запуске сервера
     asyncio.create_task(worker_of_ivents.gift_worker())
     asyncio.create_task(worker_of_coordinate.coordinate_worker())
-

@@ -239,6 +239,126 @@ export function initMenu() {
     }
   };
 
+  requirementsBtn.onclick = async (e) => {
+    e.stopPropagation();
+
+    if (requirementsList.style.display === "block") {
+      closeCreateMenu();
+      return;
+    }
+
+    requirementsBtn.innerText = "📋 Создание ▲";
+    requirementsList.style.display = "block";
+    await loadCreateData();
+  };
+
+  function closeCreateMenu() {
+    requirementsList.style.display = "none";
+    requirementsBtn.innerText = "📋 Создание ▼";
+  }
+
+  async function loadCreateData() {
+    requirementsList.innerHTML = '<div style="padding:10px; color:#aaa;">⏳ Поиск рецептов...</div>';
+
+    try {
+      const userId = getUserId();
+      if (!userId) {
+        requirementsList.innerHTML = '<div style="padding:10px;">Откройте mini app в Telegram.</div>';
+        return;
+      }
+
+      const data = await postJson("/api/get_create_items", { user_id: userId });
+      requirementsList.innerHTML = "";
+
+      if (!data.items || data.items.length === 0) {
+        requirementsList.innerHTML = '<div style="padding:10px;">Рецепты не найдены.</div>';
+        return;
+      }
+
+      for (const item of data.items) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "cave-accordion-item";
+
+        const headerBtn = document.createElement("button");
+        headerBtn.className = "cave-header-btn";
+        const icon = item.can_create ? "✅" : "🧩";
+        headerBtn.innerHTML = `🔹 <span>${item.name}</span> <span>${icon}</span>`;
+
+        const detailsDiv = document.createElement("div");
+        detailsDiv.className = "cave-details";
+
+        const reqTitle = document.createElement("div");
+        reqTitle.innerHTML = "<strong>Требования:</strong>";
+        detailsDiv.appendChild(reqTitle);
+
+        const reqList = document.createElement("ul");
+        reqList.className = "unlock-cost-list";
+        reqList.innerHTML = "<li>⏳ Загрузка...</li>";
+        detailsDiv.appendChild(reqList);
+
+        const createBtn = document.createElement("button");
+        createBtn.className = "unlock-ship-btn";
+        createBtn.innerText = "🛠 СОЗДАТЬ";
+        createBtn.onclick = async (event) => {
+          event.stopPropagation();
+          if (!confirm(`Создать предмет "${item.name}"?`)) return;
+
+          try {
+            const res = await postJson("/api/create_item", {
+              user_id: userId,
+              item_id: item.id,
+            });
+            alert(res.message || "Готово");
+            if (res.status === "ok") {
+              await loadCreateData();
+            }
+          } catch (err) {
+            console.error("Ошибка создания:", err);
+            alert(`Ошибка: ${err.message || "не удалось создать предмет"}`);
+          }
+        };
+
+        try {
+          const recipe = await postJson("/api/get_create_item_info", {
+            user_id: userId,
+            item_id: item.id,
+          });
+
+          reqList.innerHTML = "";
+          if (recipe.requirements && recipe.requirements.length > 0) {
+            recipe.requirements.forEach((req) => {
+              const li = document.createElement("li");
+              li.style.color = req.enough ? "#9eff9e" : "#ff6b6b";
+              li.innerText = `- ${req.item_name}: ${req.have_count}/${req.count}`;
+              reqList.appendChild(li);
+            });
+          } else {
+            reqList.innerHTML = "<li>Рецепт пуст</li>";
+          }
+        } catch (err) {
+          reqList.innerHTML = "<li>Ошибка получения требований</li>";
+        }
+
+        detailsDiv.appendChild(createBtn);
+
+        headerBtn.onclick = (event) => {
+          event.stopPropagation();
+          document.querySelectorAll(".cave-details").forEach((el) => {
+            if (el !== detailsDiv) el.classList.remove("open");
+          });
+          detailsDiv.classList.toggle("open");
+        };
+
+        wrapper.appendChild(headerBtn);
+        wrapper.appendChild(detailsDiv);
+        requirementsList.appendChild(wrapper);
+      }
+    } catch (err) {
+      console.error(err);
+      requirementsList.innerHTML = '<div style="color:red; padding:10px;">Ошибка загрузки рецептов!</div>';
+    }
+  }
+
   choiceShipBtn.onclick = async (e) => {
     e.stopPropagation();
 

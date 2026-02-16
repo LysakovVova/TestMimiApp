@@ -46,6 +46,7 @@ def get_user_inventory(user_id: int): # Получаем инвентарь по
         FROM inventory
         JOIN items ON inventory.item_id = items.id
         WHERE inventory.user_id = ?
+        ORDER BY items.name ASC
     '''
     cursor.execute(query, (user_id,))
     items = cursor.fetchall()
@@ -505,3 +506,132 @@ def choice_ship(user_id: int, ship_id: int):
     conn.close()
     
     return {"status": "ok", "message": f"Вы выбрали корабль {ship_name}!", "ship_name": ship_name}
+
+
+def get_create_items(user_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        '''
+        SELECT craft_item.id, craft_item.name,
+               MIN(CASE WHEN COALESCE(inv.count, 0) >= req.count THEN 1 ELSE 0 END) AS can_create
+        FROM item_requirements req
+        JOIN items craft_item ON craft_item.id = req.item_id
+        LEFT JOIN inventory inv
+               ON inv.user_id = ? AND inv.item_id = req.required_item_id
+        GROUP BY craft_item.id, craft_item.name
+        ORDER BY craft_item.id
+        ''',
+        (user_id,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    return {
+        "items": [
+            {"id": row[0], "name": row[1], "can_create": bool(row[2])}
+            for row in rows
+        ]
+    }
+
+
+def get_create_item_info(item_id: int, user_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        '''
+        SELECT req.required_item_id,
+               required_item.name,
+               req.count,
+               COALESCE(inv.count, 0) AS have_count
+        FROM item_requirements req
+        JOIN items required_item ON required_item.id = req.required_item_id
+        LEFT JOIN inventory inv
+               ON inv.user_id = ? AND inv.item_id = req.required_item_id
+        WHERE req.item_id = ?
+        ORDER BY req.required_item_id
+        ''',
+        (user_id, item_id)
+    )
+    requirements = cursor.fetchall()
+    conn.close()
+
+    return {
+        "requirements": [
+            {
+                "item_id": req[0],
+                "item_name": req[1],
+                "count": req[2],
+                "have_count": req[3],
+                "enough": req[3] >= req[2],
+            }
+            for req in requirements
+        ]
+    }
+
+
+def create_item(user_id: int, item_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        '''
+        SELECT req.required_item_id,
+               required_item.name,
+               req.count,
+               COALESCE(inv.count, 0) AS have_count
+        FROM item_requirements req
+        JOIN items required_item ON required_item.id = req.required_item_id
+        LEFT JOIN inventory inv
+               ON inv.user_id = ? AND inv.item_id = req.required_item_id
+        WHERE req.item_id = ?
+        ''',
+        (user_id, item_id)
+    )
+    requirements = cursor.fetchall()
+
+    if not requirements:
+        conn.close()
+        return {"status": "error", "message": "Рецепт не найден"}
+
+    for req_item_id, req_item_name, req_count, have_count in requirements:
+        if have_count < req_count:
+            conn.close()
+            return {"status": "error", "message": f"Недостаточно ресурса: {req_item_name}"}
+
+    try:
+        for req_item_id, _, req_count, _ in requirements:
+            cursor.execute(
+                '''
+                UPDATE inventory
+                SET count = count - ?
+                WHERE user_id = ? AND item_id = ?
+                ''',
+                (req_count, user_id, req_item_id),
+            )
+
+        cursor.execute(
+            '''
+            INSERT INTO inventory (user_id, item_id, count)
+            VALUES (?, ?, 1)
+            ON CONFLICT(user_id, item_id)
+            DO UPDATE SET count = count + 1
+            ''',
+            (user_id, item_id),
+        )
+
+        crafted_item = cursor.execute(
+            "SELECT name FROM items WHERE id = ?",
+            (item_id,),
+        ).fetchone()
+        crafted_item_name = crafted_item[0] if crafted_item else f"ID {item_id}"
+
+        conn.commit()
+        return {"status": "ok", "message": f"Создан предмет: {crafted_item_name}"}
+    except Exception:
+        conn.rollback()
+        return {"status": "error", "message": "Ошибка БД"}
+    finally:
+        conn.close()
