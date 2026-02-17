@@ -21,8 +21,7 @@ export async function updateUserCoordinate() {
     }
 
     try {
-        // Проверь, точно ли адрес API правильный (get_used_coordinates или get_user_coordinates?)
-        const response = await fetch("/api/get_used_coordinates", {
+        const response = await fetch("/api/get_user_coordinates", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ user_id: user_id })

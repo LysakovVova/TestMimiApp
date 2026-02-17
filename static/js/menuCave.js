@@ -1,8 +1,8 @@
 // js/menuCave.js
 import { tg, getUserId, postJson } from "./api.js";
+import { DropdownManager } from "./menu.js";
 
 export function initCaveMenu() {
-    // tg.expand(); // Можно оставить, если нужно
 
     const menuBtn = document.getElementById("menuCaveBtn");
     const caveList = document.getElementById("caveList");

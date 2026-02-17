@@ -1,8 +1,7 @@
 // js/menu.js
 import { tg, getUserId, postJson } from "./api.js";
-import { updateUserCoordinate } from "./app.js";
 
-class DropdownManager {
+export class DropdownManager {
     constructor(config) {
         this.config = config;
         this.button = document.getElementById(config.buttonId);
@@ -115,6 +114,9 @@ class DropdownManager {
         if (item.count !== undefined && item.count !== null) {
             countText = ` <span style="color: #e94560; font-weight: margin-left: 5px;">: ${item.count}</span>`;
         }
+        if (item.coordinate_x !== undefined && item.coordinate_y !== undefined) {
+            countText = ` <span style="color: #e94560; font-weight: margin-left: 5px;">: (${item.coordinate_x}, ${item.coordinate_y})</span>`;
+        }
 
         // ФОРМИРУЕМ HTML КНОПКИ
         // Левая часть (Иконка + Имя + Кол-во)
@@ -139,7 +141,7 @@ class DropdownManager {
                 detailsDiv.innerHTML += `<p style="color:#ccc; font-size:0.9em; margin: 5px 0 10px 0;">${item.description}</p>`;
             }
             
-            // Кнопка действия (Использовать/Сканировать)
+            // Кнопка действия (Использовать/Полететь)
             if (this.config.apiAction) {
                 const actionBtn = document.createElement("button");
                 actionBtn.className = "select-mine-btn";
