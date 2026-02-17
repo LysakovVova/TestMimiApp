@@ -8,8 +8,7 @@ DB_NAME = os.getenv("DB_NAME")
 
 async def gift_worker():
     while True:
-        # 1. Ждем 10 секунд перед следующей раздачей (для теста, потом поставь больше)
-        await asyncio.sleep(60)  # 600 секунд = 10 минут
+        await asyncio.sleep(60)
         conn = None
         try:
             conn = sqlite3.connect(DB_NAME, timeout=30)

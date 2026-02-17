@@ -7,4 +7,10 @@ load_dotenv()  # Загружаем переменные окружения из
 
 user_id = 776659667
 
-print(user_action.mine(user_id))
+conn = sqlite3.connect(os.getenv("DB_NAME"))
+cursor = conn.cursor()
+
+cursor.execute("DELETE FROM caves")
+
+conn.commit()
+conn.close()
