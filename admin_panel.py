@@ -5,12 +5,11 @@ from dotenv import load_dotenv
 
 load_dotenv()  # Загружаем переменные окружения из файла .env
 
-user_id = 776659667
+user_id = 797667496
 
-conn = sqlite3.connect(os.getenv("DB_NAME"))
+game = user_action.GameRepository(os.getenv("DB_NAME"))  # Инициализируем репозиторий для работы с базой данных
+
+DB_NAME = os.getenv("DB_NAME")
+
+conn = sqlite3.connect(DB_NAME)
 cursor = conn.cursor()
-
-cursor.execute("DELETE FROM caves")
-
-conn.commit()
-conn.close()

@@ -4,8 +4,9 @@ import { initMenu } from "./menu.js";
 import { initCaveMenu, toggleMineInterface } from "./menuCave.js";
 
 initMenu();
-initCaveMenu();
 updateUserCoordinate();
+
+initCaveMenu();
 
 export async function updateUserCoordinate() {
     // 1. Ищем правильный ID (как в HTML)
@@ -38,6 +39,8 @@ export async function updateUserCoordinate() {
         const planet = data.planet_name || "Открытый космос";
 
         if (planet === "Открытый космос") {
+
+
             toggleMineInterface(false); // Скрываем интерфейс шахт
         } else{
             toggleMineInterface(true); // Показываем интерфейс шахт

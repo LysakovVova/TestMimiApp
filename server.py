@@ -87,7 +87,7 @@ def set_target_planet(req: planetReq):
     user_id = req.user_id
     target_planet_id = req.planet_id
     game.auth_user_db(user_id)
-    
+    game.select_cave(user_id, 0) # Если юзер выбирает планету, он автоматически выходит из шахты (если был в ней)
     return game.set_target_planet(user_id, target_planet_id)
 
 
@@ -109,7 +109,7 @@ def get_user_coordinates(req: BaseUserReq):
 def choice_cave(req: CaveReq):
     user_id = req.user_id
     cave_id = req.cave_id
-    return game.choice_cave(user_id, cave_id)
+    return game.select_cave(user_id, cave_id)
 
 
 
@@ -120,12 +120,11 @@ def unlock_cave(req: CaveReq):
     return game.unlock_cave(user_id, cave_id)
 
 
-
-
 @app.post("/get_cave_info")
 def get_cave_info(req: CaveReq):
     cave_id = req.cave_id
-    return game.get_cave_info(cave_id)
+    user_id = req.user_id
+    return game.get_cave_info(user_id, cave_id)
 
 
 
@@ -152,7 +151,7 @@ def use_item(req: planetReq):
     return game.use_item(user_id, item_id)
 
 @app.post("/mine_cave")
-def mine(req: CaveReq):
+def mine(req: BaseUserReq):
     user_id = req.user_id
     return game.mine(user_id)
 

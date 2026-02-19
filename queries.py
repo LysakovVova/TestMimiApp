@@ -31,19 +31,6 @@ class SQL:
     
     UPDATE_TARGET_PLANET = "UPDATE users SET target_planet_id = ?, currently_on_planet_id = 0 WHERE user_id = ?"
     RESET_PLANET_STATUS = "UPDATE users SET currently_on_planet_id = 0 WHERE user_id = ?" # Если улетаем
-    
-    # --- Пещеры (Caves) ---
-    # Получить пещеры на планете + статус разблокировки
-    GET_CAVES_WITH_STATUS = """
-        SELECT c.id, c.name, 
-               CASE WHEN uc.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_unlocked
-        FROM caves c
-        LEFT JOIN unlock_caves uc ON c.id = uc.cave_id AND uc.user_id = ?
-        WHERE c.planet_id = ?
-    """
-    CHECK_CAVE_UNLOCKED = "SELECT 1 FROM unlock_caves WHERE user_id = ? AND cave_id = ?"
-    GET_CAVE_NAME = "SELECT name FROM caves WHERE id = ?"
-    SET_CURRENT_CAVE = "UPDATE users SET currently_on_cave_id = ? WHERE user_id = ?"
 
     # --- Майнинг ---
     GET_CAVE_RESOURCES = "SELECT id, chance, name FROM items WHERE cave_id = ?"
@@ -133,3 +120,54 @@ class SQL:
 
     # 6. Получить имя корабля (для сообщений)
     GET_SHIP_NAME = "SELECT name FROM spaceship WHERE ship_id = ?"
+
+
+    # --- Логика для шахт (Caves) ---
+
+    GET_USER_PLANET = "SELECT currently_on_planet_id FROM users WHERE user_id = ?"
+
+    GET_CAVES_LIST = """
+        SELECT 
+            c.id as cave_id, 
+            c.name,
+            CASE WHEN uc.user_id IS NOT NULL THEN 1 ELSE 0 END as is_unlocked,
+            CASE 
+                -- Если уже открыта -> 1
+                WHEN uc.user_id IS NOT NULL THEN 1
+                WHEN SUM(CASE WHEN COALESCE(inv.count, 0) < req.count THEN 1 ELSE 0 END) = 0 THEN 1 
+                ELSE 0 
+            END as can_unlock
+        
+        FROM caves c
+        LEFT JOIN unlock_caves uc ON c.id = uc.cave_id AND uc.user_id = ?
+        LEFT JOIN cave_requirements req ON req.cave_id = c.id
+        LEFT JOIN inventory inv ON inv.user_id = ? AND inv.item_id = req.item_id
+        WHERE c.planet_id = ?
+        GROUP BY c.id, c.name
+        ORDER BY c.id
+    """
+
+    # 2. Требования для открытия конкретной шахты (как у кораблей)
+    GET_CAVE_REQUIREMENTS = """
+        SELECT 
+            req.item_id, 
+            i.name as item_name, 
+            req.count as required, 
+            COALESCE(inv.count, 0) as have
+        FROM cave_requirements req
+        JOIN items i ON i.id = req.item_id
+        LEFT JOIN inventory inv ON inv.user_id = ? AND inv.item_id = req.item_id
+        WHERE req.cave_id = ?
+    """
+
+    # 3. Проверка: открыта ли шахта?
+    CHECK_CAVE_UNLOCKED = "SELECT 1 FROM unlock_caves WHERE user_id = ? AND cave_id = ?"
+
+    # 4. Действие: Разблокировать (запись в таблицу)
+    UNLOCK_CAVE = "INSERT INTO unlock_caves (user_id, cave_id) VALUES (?, ?)"
+
+    # 5. Действие: Выбрать активную шахту
+    SELECT_CAVE = "UPDATE users SET currently_on_cave_id = ? WHERE user_id = ?"
+
+    # 6. Получить имя шахты
+    GET_CAVE_NAME = "SELECT name FROM caves WHERE id = ?"

@@ -140,25 +140,106 @@ class GameRepository:
     # =====================================================
 
     def get_caves(self, user_id):
-        planet_id = self._fetch_one(SQL.GET_USER_DATA, (user_id,))['currently_on_planet_id']
+        """Возвращает список всех шахт со статусами."""
+        # Передаем user_id дважды для JOIN (чтобы узнать, открыта ли шахта у конкретного юзера)
 
-        rows = self._fetch_all(SQL.GET_CAVES_WITH_STATUS, (user_id, planet_id))
-        return {"caves": [{"id": r['id'], "name": r['name'], "is_unlocked": bool(r['is_unlocked'])} for r in rows]}
+        planet_id = self._fetch_one(SQL.GET_USER_PLANET, (user_id,))['currently_on_planet_id']
+        if planet_id == 0:
+            return {"caves": []} # Если юзер не на планете, шахт нет
 
-    def enter_cave(self, user_id, cave_id):
+
+        rows = self._fetch_all(SQL.GET_CAVES_LIST, (user_id,  user_id, planet_id))
+
+
+        return {
+            "caves": [
+                {
+                    "id": r['cave_id'], 
+                    "name": r['name'], 
+                    "is_unlocked": bool(r['is_unlocked']),
+                    # Можно добавить description или уровень дохода, если есть в БД
+                } 
+                for r in rows
+            ]
+        }
+
+    def get_cave_info(self, user_id, cave_id):
+        """Возвращает цену открытия шахты (требования)."""
+        rows = self._fetch_all(SQL.GET_CAVE_REQUIREMENTS, (user_id, cave_id))
+        
+        requirements = []
+        for r in rows:
+            requirements.append({
+                "item_name": r['item_name'],
+                "count": r['required'],
+                "have_count": r['have'],
+                "enough": r['have'] >= r['required']
+            })
+            
+        return {"requirements": requirements}
+
+    def unlock_cave(self, user_id, cave_id):
+        """Покупка (открытие) шахты за ресурсы."""
         with self._get_conn() as conn:
             cursor = conn.cursor()
-            
-            # 1. Проверяем, разблокирована ли
+
+            # 1. Проверка: уже открыта?
+            # Предполагаем, что есть таблица users_caves или поле в users
+            if cursor.execute(SQL.CHECK_CAVE_UNLOCKED, (user_id, cave_id)).fetchone():
+                return {"status": "ok", "message": "Шахта уже открыта!"}
+
+            # 2. Получаем требования для открытия этой шахты
+            cursor.execute(SQL.GET_CAVE_REQUIREMENTS, (user_id, cave_id))
+            requirements = cursor.fetchall()
+
+            if not requirements:
+                 cursor.execute(SQL.UNLOCK_CAVE, (user_id, cave_id))
+                 return {"status": "ok", "message": "Шахта успешно открыта!"}
+
+            # 3. Проверяем ресурсы (хватает ли?)
+            for req in requirements:
+                if req['have'] < req['required']:
+                    return {"status": "error", "message": f"Не хватает: {req['item_name']}"}
+
+            try:
+                # 4. Списываем ресурсы
+                for req in requirements:
+                    # Используем тот же SQL.REMOVE_ITEM, так как инвентарь общий
+                    cursor.execute(SQL.REMOVE_ITEM, (req['required'], user_id, req['item_id']))
+
+                # 5. Разблокируем шахту (записываем в таблицу unlocked_caves)
+                cursor.execute(SQL.UNLOCK_CAVE, (user_id, cave_id))
+                
+                conn.commit()
+                return {"status": "ok", "message": "Шахта успешно открыта!"}
+
+            except Exception as e:
+                conn.rollback()
+                print(f"Unlock Cave Error: {e}")
+                return {"status": "error", "message": "Ошибка базы данных при открытии шахты"}
+
+    def select_cave(self, user_id, cave_id):
+        """
+        Выбор шахты (вход в нее).
+        Сначала проверяет, открыта ли она.
+        """
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+
+            # 1. Проверка доступа (открыта ли шахта)
             if not cursor.execute(SQL.CHECK_CAVE_UNLOCKED, (user_id, cave_id)).fetchone():
-                return {"status": "error", "message": "Пещера закрыта! Сначала разблокируйте её."}
+                 return {"status": "error", "message": "Эта шахта еще закрыта! Сначала разблокируйте её."}
+
+            # 2. Устанавливаем текущую шахту пользователю
+            # Обычно это update users set current_cave_id = ? where id = ?
+            cursor.execute(SQL.SELECT_CAVE, (cave_id, user_id))
             
-            # 2. Обновляем статус юзера
-            cursor.execute(SQL.SET_CURRENT_CAVE, (cave_id, user_id))
-            name = cursor.execute(SQL.GET_CAVE_NAME, (cave_id,)).fetchone()['name']
+            # 3. Получаем имя для красивого сообщения
+            res = cursor.execute(SQL.GET_CAVE_NAME, (cave_id,)).fetchone()
+            name = res['name'] if res else "Неизвестная шахта"
             
             conn.commit()
-            return {"status": "ok", "message": f"Вы вошли в {name}", "cave_name": name}
+            return {"status": "ok", "message": f"Вы вошли в: {name}"}
 
     # =====================================================
     # 5. МАЙНИНГ
@@ -200,8 +281,11 @@ class GameRepository:
             conn.commit()
 
             # 5. Красивый вывод
-            result_list = [{"item_name": name, "count": count} for item_id, (name, count) in zip(mined_names.keys(), mined_total.values())]
-            
+            result_list = [
+                {"item_name": mined_names[item_id], "count": count} 
+                for item_id, count in mined_total.items()
+            ]
+
             return {
                 "status": "ok", 
                 "mined_items": result_list, 

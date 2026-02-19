@@ -238,3 +238,44 @@ p { color: #aeb6bf; }
 
 /* Класс для скрытия */
 .hidden { display: none !important; }
+
+
+/* Контейнер списка требований */
+.requirements-list {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+/* Строка одного ресурса */
+.resource-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 14px;
+}
+
+.resource-row:last-child {
+    border-bottom: none;
+}
+
+/* Если ресурсов хватает */
+.res-sufficient {
+    color: #4cd964; /* Зеленый */
+}
+
+/* Если ресурсов НЕ хватает */
+.res-insufficient {
+    color: #ff3b30; /* Красный */
+    font-weight: bold;
+}
+
+/* Кнопка разблокировки (заблокированная) */
+.btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #555 !important;
+}

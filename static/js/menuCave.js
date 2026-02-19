@@ -1,278 +1,316 @@
-// js/menuCave.js
 import { tg, getUserId, postJson } from "./api.js";
-import { DropdownManager } from "./menu.js";
 
-export function initCaveMenu() {
-
-    const menuBtn = document.getElementById("menuCaveBtn");
-    const caveList = document.getElementById("caveList");
-    const menuContent = document.getElementById("menuCaveContent"); // Сам выпадающий блок
-    const caveMiningBtn = document.getElementById("caveMiningBtn");
-    const miningresult = document.getElementById("miningResult");
-
-    miningresult.style.display = "none"; // Скрываем блок результата при инициализации
-    miningresult.innerHTML = ""; // Очищаем текст результата
-    caveMiningBtn.style.display = "none"; // Скрываем кнопку добычи при инициализации
-    caveMiningBtn.innerText = `⛏️ Добывать`; // Сбрасываем текст кнопки
-
-    if (!menuBtn || !caveList || !menuContent) {
-        console.error("Элементы меню шахт не найдены!");
-        return;
+class CaveManager {
+    constructor() {
+        // Кеш элементов DOM
+        this.dom = {
+            interface: document.getElementById("mine_interface"),
+            menuBtn: document.getElementById("menuCaveBtn"),
+            menuContent: document.getElementById("menuCaveContent"),
+            list: document.getElementById("caveList"),
+            mineBtn: document.getElementById("caveMiningBtn"),
+            result: document.getElementById("miningResult")
+        };
     }
 
-    caveMiningBtn.onclick = async () => {
+    init() {
+        if (!this.dom.menuBtn || !this.dom.list) {
+            console.error("CaveManager: Элементы не найдены");
+            return;
+        }
 
+        // Скрываем лишнее при старте
+        this.dom.result.style.display = "none";
+        this.dom.mineBtn.style.display = "none";
+
+        // Листенеры
+        this.dom.mineBtn.onclick = () => this.mine();
+        
+        this.dom.menuBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.toggleMenu();
+        };
+
+        window.addEventListener("click", (e) => this.handleGlobalClick(e));
+    }
+
+    // --- Меню ---
+    toggleMenu() {
+        if (this.dom.menuContent.classList.contains("show")) {
+            this.closeMenu();
+        } else {
+            this.openMenu();
+        }
+    }
+
+    openMenu() {
+        this.dom.menuContent.classList.add("show");
+        this.dom.menuBtn.innerText = "⛏️ Выбор Шахт ▲";
+        this.loadCaveList();
+    }
+
+    closeMenu() {
+        this.dom.menuContent.classList.remove("show");
+        this.dom.menuBtn.innerText = "⛏️ Выбор Шахт ▼";
+    }
+
+    toggleInterface(show) {
+        if (!this.dom.interface) return;
+        if (show) {
+            this.dom.interface.classList.remove("hidden");
+        } else {
+            this.dom.interface.classList.add("hidden");
+            this.closeMenu();
+            this.dom.result.style.display = "none";
+        }
+    }
+
+    // --- Загрузка списка шахт ---
+    async loadCaveList() {
+        this.dom.list.innerHTML = '<div style="padding:10px; color:#aaa;">⏳ Загрузка списка...</div>';
         const userId = getUserId();
-        const data = await postJson("/api/mine_cave", { user_id: userId });
 
-        miningresult.style.display = "block"; // Показываем блок результата
-
-        if (data.status === "ok") {
-            miningresult.innerHTML = `<h3>Результат добычи в ${data.cave_name}:</h3>`;
-
-            if (data.mined_items && data.mined_items.length > 0) {
-                const ul = document.createElement("ul");
-
-                data.mined_items.forEach(item => {
-                    const li = document.createElement("li");
-                    li.innerText = `${item.item_name}: ${item.count}`;
-                    ul.appendChild(li);
-                });
-                miningresult.appendChild(ul);
-            } else {
-                miningresult.innerHTML += "<p>Ничего не найдено...</p>";
-            }
-        } else {
-            miningresult.innerHTML = `<p style="color:red;">Ошибка: ${data.message}</p>`;
-        }
-    }
-
-    // Обработчик клика по кнопке
-    menuBtn.addEventListener("click", async (e) => {
-        e.stopPropagation(); // Остановить всплытие, чтобы window не поймал клик сразу
-
-        // Проверяем, открыто ли меню через класс (это надежнее)
-        const isOpen = menuContent.classList.contains("show");
-
-        if (isOpen) {
-            // ЗАКРЫВАЕМ
-            closeCaveMenu();
-        } else {
-            // ОТКРЫВАЕМ
-            menuContent.classList.add("show"); // Сразу показываем блок
-            menuBtn.innerText = "⛏️ Выбор Шахт ▲";
-        
-            caveList.innerHTML.trim() === "";
-            await loadCaveData();
-        }
-    });
-
-    // Функция загрузки данных
-    async function loadCaveData() {
-        caveList.innerHTML = '<div style="padding:10px; color:#aaa;">⏳ Загрузка...</div>';
-        
         try {
-            const userId = getUserId();
             const data = await postJson("/api/get_cave", { user_id: userId });
-
-            caveList.innerHTML = ""; // Очищаем "Загрузку"
+            this.dom.list.innerHTML = "";
 
             if (data.caves && data.caves.length > 0) {
-                data.caves.forEach(async cave => {
-                    
-                    // 1. Создаем обертку
-                    const wrapper = document.createElement("div");
-                    wrapper.className = "cave-accordion-item";
-
-                    // 2. Создаем заголовок (Название шахты)
-                    const headerBtn = document.createElement("button");
-                    headerBtn.className = "cave-header-btn";
-                    // Добавляем иконку состояния справа
-                    const icon = cave.is_unlocked ? "⛏️" : "🔒";
-                    headerBtn.innerHTML = `<span>${cave.name}</span> <span>${icon}</span>`;
-
-                    // 3. Создаем блок деталей (скрытый)
-                    const detailsDiv = document.createElement("div");
-                    detailsDiv.className = "cave-details";
-
-                    // --- ЛОГИКА НАПОЛНЕНИЯ ---
-                    if (cave.is_unlocked) {
-                        // ВАРИАНТ А: Шахта открыта -> Показываем кнопку "Выбрать"
-                        const desc = document.createElement("p");
-                        desc.innerText = "Шахта доступна для добычи.";
-                        
-                        const selectBtn = document.createElement("button");
-                        selectBtn.className = "select-mine-btn";
-                        selectBtn.innerText = "✅ ВЫБРАТЬ ЭТУ ШАХТУ";
-                        
-                        // Клик по кнопке выбора
-                        selectBtn.onclick = (e) => {
-                            e.stopPropagation(); // Не закрываем меню
-                            targetMine(cave.id, headerBtn); // Твоя функция выбора
-                        };
-
-                        detailsDiv.appendChild(desc);
-                        detailsDiv.appendChild(selectBtn);
-
-                    } else {
-                        // ВАРИАНТ Б: Шахта закрыта -> Показываем цену
-                        const lockedText = document.createElement("div");
-                        lockedText.innerHTML = "<strong>Требования для разблокировки:</strong>";
-                        
-                        const costList = document.createElement("ul");
-                        costList.className = "unlock-cost-list";
-
-                        const caveInfo = await postJson("/api/get_cave_info", { user_id: userId, cave_id: cave.id });
-
-
-                        if (caveInfo.requirements && caveInfo.requirements.length > 0) {
-                            caveInfo.requirements.forEach(cost => {
-                                const li = document.createElement("li");
-                                li.innerText = `- ${cost.item_name}: ${cost.count}`;
-                                costList.appendChild(li);
-                            });
-                        } else {
-                            // Заглушка, если данных нет
-                            costList.innerHTML = "<li>Бесплатная шахта</li>";
-                        }
-
-                        // Можно добавить кнопку "Разблокировать", если хочешь
-                        const unlockBtn = document.createElement("button");
-                        unlockBtn.className = "select-mine-btn";
-                        unlockBtn.innerText = "⛏️ РАЗБЛОКИРОВАТЬ";
-                        unlockBtn.onclick = async (e) => {
-                            e.stopPropagation();
-                            const data = await postJson("/api/unlock_cave", { user_id: userId, cave_id: cave.id });
-                            alert(data.message);
-                            if (data.status === "ok") {                                
-                                loadCaveData(); // Перезагружаем данные, чтобы отобразить изменения
-                            }
-                        }
-                        
-                        detailsDiv.appendChild(lockedText);
-                        detailsDiv.appendChild(costList);
-                        detailsDiv.appendChild(unlockBtn);
-                    }
-
-                    // 4. Клик по ЗАГОЛОВКУ -> Открыть/Закрыть детали
-                    headerBtn.onclick = (e) => {
-                        e.stopPropagation();
-                        
-                        // Закрываем все остальные открытые шахты (аккордеон) - ОПЦИОНАЛЬНО
-                        document.querySelectorAll('.cave-details').forEach(el => {
-                            if (el !== detailsDiv) el.classList.remove('open');
-                        });
-
-                        // Переключаем текущий
-                        detailsDiv.classList.toggle("open");
-                    };
-
-                    // Собираем всё вместе
-                    wrapper.appendChild(headerBtn);
-                    wrapper.appendChild(detailsDiv);
-                    caveList.appendChild(wrapper);
-                });
+                data.caves.forEach(cave => this.renderCaveItem(cave, userId));
             } else {
-                caveList.innerHTML = '<div style="padding:10px; color:#aaa;">Шахты не найдены.</div>';
+                this.dom.list.innerHTML = '<div style="padding:10px;">Нет доступных шахт</div>';
             }
         } catch (e) {
             console.error(e);
-            caveList.innerHTML = '<div style="padding:10px; color:red;">Ошибка связи!</div>';
+            this.dom.list.innerHTML = '<div style="color:red;">Ошибка сети</div>';
         }
     }
 
-    // Функция закрытия (вынесли отдельно, чтобы удобно вызывать)
-    function closeCaveMenu() {
-        menuContent.classList.remove("show");
-        menuBtn.innerText = "⛏️ Выбор Шахт ▼";
-        menuBtn.style.color = "white";
-    }
+    // --- Рендер одной строки (Аккордеон) ---
+    renderCaveItem(cave, userId) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "cave-accordion-item";
 
-    async function targetMine(caveId, buttonElement) {
-    try {
-        const userId = getUserId(); // Получаем ID игрока
-        
-        // Отправляем запрос на сервер
-        const data = await postJson("/api/choice_cave", { 
-            user_id: userId, 
-            cave_id: caveId 
-        });
-        if (data.status === "error") {
-            alert(`Ошибка: ${data.message}`);
+        // 1. Заголовок
+        const headerBtn = document.createElement("button");
+        headerBtn.className = "cave-header-btn";
+        const icon = cave.is_unlocked ? "🟢" : "🔒"; // Зеленый круг или замок
+        headerBtn.innerHTML = `<span>${cave.name}</span> <span>${icon}</span>`;
 
-            return;
+        // 2. Блок деталей (скрытый)
+        const detailsDiv = document.createElement("div");
+        detailsDiv.className = "cave-details";
+
+        if (cave.is_unlocked) {
+            // -- ЕСЛИ ОТКРЫТА --
+            detailsDiv.innerHTML = `<p style="margin:10px 0; font-size:14px; color:#aaa;">Шахта готова к работе.</p>`;
+            
+            const selectBtn = document.createElement("button");
+            selectBtn.className = "select-mine-btn"; // Используем твой CSS класс кнопки
+            selectBtn.innerHTML = "✅ ВЫБРАТЬ";
+            selectBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.selectCave(cave.id, cave.name);
+            };
+            detailsDiv.appendChild(selectBtn);
+
+        } else {
+            // -- ЕСЛИ ЗАКРЫТА (Показываем требования как крафт) --
+            detailsDiv.innerHTML = `<div style="margin-bottom:5px;"><strong>Требуется для открытия:</strong></div>`;
+            
+            // Контейнер для списка ресурсов
+            const reqList = document.createElement("div");
+            reqList.className = "requirements-list";
+            reqList.innerHTML = "⏳ Проверка ресурсов..."; 
+            detailsDiv.appendChild(reqList);
+
+            // Кнопка разблокировки (изначально скрыта или неактивна)
+            const unlockBtn = document.createElement("button");
+            unlockBtn.className = "select-mine-btn btn-disabled"; // Добавляем класс disabled
+            unlockBtn.innerText = "🔒 РАЗБЛОКИРОВАТЬ";
+            unlockBtn.disabled = true;
+
+            unlockBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.unlockCave(cave.id, userId);
+            };
+            detailsDiv.appendChild(unlockBtn);
+
+            // ! ГЛАВНОЕ: При клике на заголовок загружаем инфу и сравниваем с инвентарем
+            headerBtn.addEventListener('click', () => {
+                if (!detailsDiv.classList.contains("open")) {
+                    // Передаем кнопку, чтобы активировать её, если ресурсов хватает
+                    this.loadRequirements(cave.id, userId, reqList, unlockBtn);
+                }
+            });
         }
-        // Если сервер вернул успех
-        alert(`${data.message}`);
-        const caveMiningBtn = document.getElementById("caveMiningBtn");
-        caveMiningBtn.style.display = "block";
-        caveMiningBtn.innerText = `⛏️ Добывать в ${data.cave_name}`;
 
-    } catch (error) {
-        console.error("Ошибка выбора шахты:", error);
-        alert("Ошибка сети!");
+        // Клик по аккордеону
+        headerBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.toggleAccordion(detailsDiv);
+        };
+
+        wrapper.appendChild(headerBtn);
+        wrapper.appendChild(detailsDiv);
+        this.dom.list.appendChild(wrapper);
     }
-}
 
-    // Глобальный клик для закрытия (безопасный вариант)
-    window.addEventListener("click", (event) => {
-       const mineBtn = document.getElementById('caveMiningBtn');
-        const mineRes = document.getElementById('miningResult');
-        const menuContent = document.getElementById('menuCaveContent');
-        const menuBtn = document.getElementById('menuCaveBtn');
+    // --- Логика сравнения ресурсов (Крафт-стайл) ---
+    async loadRequirements(caveId, userId, listContainer, unlockBtn) {
+        try {
+            // Делаем два запроса параллельно: Требования шахты и Инвентарь игрока
+            // Внимание: замените "/api/get_inventory" на ваш реальный эндпоинт получения инвентаря!
+            const [caveInfo, userInventory] = await Promise.all([
+                postJson("/api/get_cave_info", { user_id: userId, cave_id: caveId })
+            ]);
 
-        // Если элементов нет на странице, выходим (защита от ошибок)
-        if (!mineBtn || !mineRes) return;
+            listContainer.innerHTML = "";
+            let canUnlock = true; // Флаг: можно ли открыть
 
-        // Проверяем, был ли клик ВНУТРИ важных элементов
-        const isClickInside = 
-            mineBtn.contains(event.target) ||      // Клик по кнопке "Копать"
-            mineRes.contains(event.target) ||      // Клик по тексту результата
-            menuContent.contains(event.target) ||  // Клик внутри списка шахт
-            menuBtn.contains(event.target);        // Клик по кнопке открытия меню
 
-        // Если клик был СНАРУЖИ (не в важных элементах)
-        if (!isClickInside) {
-            // 1. Скрываем результат
-            mineRes.style.display = "none";
-             // 2. Закрываем меню шахт, если открыто
-            const menuContent = document.getElementById('menuCaveContent');
-            if (menuContent.classList.contains("show")) {
-                menuContent.classList.remove("show");
-                const menuBtn = document.getElementById('menuCaveBtn');
-                menuBtn.innerText = "⛏️ Выбор Шахт ▼";
+            if (caveInfo.requirements && caveInfo.requirements.length > 0) {
+                caveInfo.requirements.forEach(req => {
+                    // Получаем сколько есть у юзера
+                    // req.item_id должно совпадать с тем, что в инвентаре
+                    const userHas = req.have_count || 0;
+                    const needed = req.count;
+                    const isEnough = req.enough;
+
+                    if (!isEnough) canUnlock = false;
+
+                    // Создаем красивую строку
+                    const row = document.createElement("div");
+                    row.className = "resource-row";
+                    
+                    // Левая часть: Название
+                    const nameSpan = document.createElement("span");
+                    nameSpan.innerText = req.item_name;
+
+                    // Правая часть: 5/10
+                    const countSpan = document.createElement("span");
+                    countSpan.className = isEnough ? "res-sufficient" : "res-insufficient";
+                    countSpan.innerHTML = isEnough 
+                        ? `✅ ${userHas} / ${needed}` 
+                        : `❌ ${userHas} / ${needed}`;
+
+                    row.appendChild(nameSpan);
+                    row.appendChild(countSpan);
+                    listContainer.appendChild(row);
+                });
+            } else {
+                listContainer.innerHTML = "<div style='padding:10px'>Бесплатно</div>";
             }
+
+            // Активируем кнопку, если всего хватает
+            if (canUnlock) {
+                unlockBtn.disabled = false;
+                unlockBtn.classList.remove("btn-disabled");
+                unlockBtn.innerText = "⛏️ РАЗБЛОКИРОВАТЬ";
+                unlockBtn.style.background = "#4cd964"; // Зеленый фон
+            } else {
+                unlockBtn.innerText = "🔒 НЕДОСТАТОЧНО РЕСУРСОВ";
+            }
+
+        } catch (e) {
+            console.error(e);
+            listContainer.innerHTML = "<div style='color:red'>Ошибка загрузки данных</div>";
         }
-    });
+    }
+
+    // --- Действия (Остались прежними) ---
+
+    async unlockCave(caveId, userId) {
+        if(!confirm("Разблокировать шахту? Ресурсы будут списаны.")) return;
+
+        try {
+            const data = await postJson("/api/unlock_cave", { user_id: userId, cave_id: caveId });
+            alert(data.message);
+            if (data.status === "ok") {
+                this.loadCaveList(); // Перезагружаем список
+            }
+        } catch (e) {
+            alert("Ошибка сервера");
+        }
+    }
+
+    async selectCave(caveId, caveName) {
+        try {
+            const userId = getUserId();
+            const data = await postJson("/api/choice_cave", { user_id: userId, cave_id: caveId });
+            
+            if (data.status === "error") {
+                alert(data.message); return;
+            }
+
+            alert(data.message);
+            this.dom.mineBtn.style.display = "block";
+            this.dom.mineBtn.innerText = `⛏️ Добывать в ${data.cave_name || caveName}`;
+            this.dom.result.style.display = "none";
+            this.closeMenu();
+
+        } catch (e) {
+            alert("Ошибка сети");
+        }
+    }
+
+    async mine() {
+        const userId = getUserId();
+        this.dom.result.style.display = "block";
+        this.dom.result.innerHTML = "⏳ Добыча...";
+
+        try {
+            const data = await postJson("/api/mine_cave", { user_id: userId });
+            if (data.status === "ok") {
+                this.dom.result.innerHTML = `<h3>Итог (${data.cave_name}):</h3>`;
+                if (data.mined_items?.length) {
+                    const ul = document.createElement("ul");
+                    data.mined_items.forEach(item => {
+                        const li = document.createElement("li");
+                        li.innerHTML = `${item.item_name} : ${item.count}`;
+                        ul.appendChild(li);
+                    });
+                    this.dom.result.appendChild(ul);
+                } else {
+                    this.dom.result.innerHTML += "<p>Пусто...</p>";
+                }
+            } else {
+                this.dom.result.innerHTML = `<p style="color:red">${data.message}</p>`;
+            }
+        } catch (e) {
+            this.dom.result.innerHTML = "Ошибка сети";
+        }
+    }
+
+    // Хелперы
+    toggleAccordion(target) {
+        document.querySelectorAll('.cave-details').forEach(el => {
+            if (el !== target) el.classList.remove('open');
+        });
+        target.classList.toggle("open");
+    }
+
+    handleGlobalClick(e) {
+        if (!this.dom.interface || this.dom.interface.classList.contains("hidden")) return;
+        const target = e.target;
+        const inside = this.dom.mineBtn.contains(target) ||
+                       this.dom.result.contains(target) ||
+                       this.dom.menuContent.contains(target) ||
+                       this.dom.menuBtn.contains(target);
+        
+        if (!inside) {
+            this.dom.result.style.display = "none";
+            this.closeMenu();
+        }
+    }
 }
 
+// Экземпляр и Экспорт
+const caveManager = new CaveManager();
+
+export function initCaveMenu() {
+    caveManager.init();
+}
 
 export function toggleMineInterface(show) {
-    const mineBlock = document.getElementById("mine_interface");
-    const mineBtn = document.getElementById('caveMiningBtn');
-        const mineRes = document.getElementById('miningResult');
-        const menuContent = document.getElementById('menuCaveContent');
-        const menuBtn = document.getElementById('menuCaveBtn');
-
-    
-    if (!mineBlock) return; // Защита от ошибок
-
-    if (show) {
-        mineBlock.classList.remove("hidden"); // Убираем класс -> блок появляется
-
-    } else {
-        mineBlock.classList.add("hidden");    // Добавляем класс -> блок исчезает
-
-        // 1. Скрываем результат
-            mineRes.style.display = "none";
-            mineBtn.style.display = "none"; // Скрываем кнопку добычи, если интерфейс шахт скрыт
-
-             // 2. Закрываем меню шахт, если открыто
-            const menuContent = document.getElementById('menuCaveContent');
-            if (menuContent.classList.contains("show")) {
-                menuContent.classList.remove("show");
-                menuBtn.innerText = "⛏️ Выбор Шахт ▼";
-                menuBtn.style.color = "white";
-            }
-    }
+    caveManager.toggleInterface(show);
 }
